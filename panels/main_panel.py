@@ -56,6 +56,9 @@ class QQ_RENDER_PT_output_panel(bpy.types.Panel):
         layout.separator()
 
         row = layout.row()
+        row.prop(scene, "qq_render_clear_nodes")
+
+        row = layout.row()
         row.scale_y = 1.5
         row.operator("qq_render.generate_nodes", icon="NODE")
 
