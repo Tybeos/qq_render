@@ -70,14 +70,25 @@ def count_visible_sockets(sockets) -> int:
 def estimate_node_height(node):
     """Estimates node height based on visible sockets."""
     socket_height = 22
-    header_height = 35
+    header_height = 40
+    minimum_height = 80
 
     if node.hide:
         return header_height
 
     socket_count = max(count_visible_sockets(node.inputs), count_visible_sockets(node.outputs))
 
-    return socket_count*socket_height
+    return socket_count*socket_height + minimum_height
+
+
+def estimate_lowest_node_position(tree):
+    """Estimates lowest node position based on visible sockets."""
+    if not tree.nodes:
+        return 0
+
+    min_bottom = min(node.location.y -  estimate_node_height(node) for node in tree.nodes)
+    logger.debug("Found lowest node bottom at Y=%d", min_bottom)
+    return min_bottom
 
 
 def get_lowest_node_position(tree):
@@ -85,7 +96,7 @@ def get_lowest_node_position(tree):
     if not tree.nodes:
         return 0
 
-    min_bottom = min(node.location.y - estimate_node_height(node) for node in tree.nodes)
+    min_bottom = min(node.location.y - node.dimensions.y for node in tree.nodes)
     logger.debug("Found lowest node bottom at Y=%d", min_bottom)
     return min_bottom
 
