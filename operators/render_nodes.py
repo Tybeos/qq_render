@@ -34,17 +34,14 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
 
         tree = tools.setup_compositor(scene)
 
-        clear_existing = scene.qq_render_clear_nodes
-
-        if clear_existing:
+        if scene.qq_render_clear_nodes:
             tools.clear_nodes(tree)
-            node_y_offset = 0
-        else:
-            node_y_offset = tools.get_lowest_node_position(tree)
 
         output_x_position = 600
 
         for view_layer in view_layers:
+            node_y_offset = tools.get_lowest_node_position(tree)
+
             rl_location = (0, node_y_offset)
             fo_location = (output_x_position, node_y_offset)
 
@@ -64,8 +61,6 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
                 tools.connect_denoised_passes(tree, rl_node, fo_node)
             else:
                 tools.connect_enabled_passes(tree, rl_node, fo_node)
-
-            node_y_offset -= 400
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))
