@@ -32,24 +32,24 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             self.report({"WARNING"}, "No renderable view layers found")
             return {"CANCELLED"}
 
-        tools.setup_compositor(scene)
+        tree = tools.setup_compositor(scene)
 
         if scene.qq_render_clear_nodes:
-            tools.clear_nodes(scene.node_tree)
+            tools.clear_nodes(tree)
 
         output_x_position = 600
 
         for view_layer in view_layers:
-            node_y_offset = tools.get_lowest_node_position(scene.node_tree) - 50
+            node_y_offset = tools.get_lowest_node_position(tree) - 30
 
             rl_location = (0, node_y_offset)
             fo_location = (output_x_position, node_y_offset)
 
-            rl_node = tools.create_render_layers_node(scene.node_tree, view_layer, rl_location)
+            rl_node = tools.create_render_layers_node(tree, view_layer, rl_location)
 
             base_path = tools.get_output_base_path(scene, view_layer)
             fo_node = tools.create_file_output_node(
-                scene.node_tree,
+                tree,
                 name="{}_Output".format(view_layer.name),
                 location=fo_location,
                 base_path=base_path
@@ -58,9 +58,9 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             use_denoise = view_layer.cycles.denoising_store_passes if scene.render.engine == "CYCLES" else False
 
             if use_denoise:
-                tools.connect_denoised_passes(scene.node_tree, rl_node, fo_node)
+                tools.connect_denoised_passes(tree, rl_node, fo_node)
             else:
-                tools.connect_enabled_passes(scene.node_tree, rl_node, fo_node)
+                tools.connect_enabled_passes(tree, rl_node, fo_node)
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))

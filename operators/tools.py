@@ -53,6 +53,7 @@ def setup_compositor(scene):
     """Enables compositor nodes"""
     scene.use_nodes = True
     logger.debug("Compositor enabled for scene %s", scene.name)
+    return scene.node_tree
 
 
 def clear_nodes(tree):
@@ -62,12 +63,29 @@ def clear_nodes(tree):
     logger.debug("Cleared all compositor nodes")
 
 
+def count_visible_sockets(sockets) -> int:
+    return sum(1 for socket in sockets if socket.enabled)
+
+
+def estimate_node_height(node):
+    """Estimates node height based on visible sockets."""
+    socket_height = 22
+    header_height = 35
+
+    if node.hide:
+        return header_height
+
+    socket_count = max(count_visible_sockets(node.inputs), count_visible_sockets(node.outputs))
+
+    return socket_count*socket_height
+
+
 def get_lowest_node_position(tree):
     """Returns the Y position below the lowest node in the tree."""
     if not tree.nodes:
         return 0
 
-    min_bottom = min(node.location.y - node.dimensions.y for node in tree.nodes)
+    min_bottom = min(node.location.y - estimate_node_height(node) for node in tree.nodes)
     logger.debug("Found lowest node bottom at Y=%d", min_bottom)
     return min_bottom
 
