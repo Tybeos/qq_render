@@ -68,9 +68,9 @@ def get_lowest_node_position(tree):
     if not tree.nodes:
         return 0
 
-    min_y = min(node.location.y for node in tree.nodes)
-    logger.debug("Found lowest node position at Y=%d", min_y)
-    return min_y - 400
+    min_bottom = min(node.location.y - node.dimensions.y for node in tree.nodes)
+    logger.debug("Found lowest node bottom at Y=%d", min_bottom)
+    return min_bottom
 
 
 def create_render_layers_node(tree, view_layer, location):

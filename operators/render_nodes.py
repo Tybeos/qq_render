@@ -40,7 +40,7 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
         output_x_position = 600
 
         for view_layer in view_layers:
-            node_y_offset = tools.get_lowest_node_position(tree)
+            node_y_offset = tools.get_lowest_node_position(tree) - 100
 
             rl_location = (0, node_y_offset)
             fo_location = (output_x_position, node_y_offset)
