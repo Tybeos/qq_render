@@ -106,13 +106,8 @@ def create_file_output_node(tree, name, location, base_path):
 
 def connect_enabled_passes(tree, render_layers_node, file_output_node):
     """Connects all enabled passes from Render Layers to File Output."""
-    connected_count = 0
-
     for output in render_layers_node.outputs:
         if not output.enabled:
-            continue
-
-        if output.name in ("Image", "Alpha"):
             continue
 
         file_output_node.file_slots.new(name=output.name)
@@ -120,8 +115,6 @@ def connect_enabled_passes(tree, render_layers_node, file_output_node):
         for input_socket in file_output_node.inputs:
             if input_socket.name == output.name:
                 tree.links.new(output, input_socket)
-                connected_count += 1
                 break
 
-    logger.debug("Connected %d passes from %s to %s", connected_count, render_layers_node.name, file_output_node.name)
-    return connected_count
+    logger.debug("Connected passes from %s to %s", render_layers_node.name, file_output_node.name)
