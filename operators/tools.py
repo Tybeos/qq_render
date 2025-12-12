@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bpy
 
-from ..core.constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS
+from ..core.constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES
 
 logger = logging.getLogger(__name__)
 
@@ -118,3 +118,65 @@ def connect_enabled_passes(tree, render_layers_node, file_output_node):
                 break
 
     logger.debug("Connected passes from %s to %s", render_layers_node.name, file_output_node.name)
+
+
+def create_denoise_node(tree, name, location):
+    """Creates a Denoise node."""
+    node = tree.nodes.new(type="CompositorNodeDenoise")
+    node.name = name
+    node.label = name
+    node.location = location
+    node.hide = True
+    node.use_custom_color = True
+    node.color = NODE_COLORS["denoise"]
+    logger.debug("Created Denoise node %s at %s", name, location)
+    return node
+
+
+def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_x_offset=300):
+    """Connects passes with denoise nodes for applicable passes."""
+    denoise_y_offset = 0
+    rl_x = render_layers_node.location[0]
+    rl_y = render_layers_node.location[1]
+
+    has_denoising_data = (
+        render_layers_node.outputs.get("Denoising Normal") and
+        render_layers_node.outputs.get("Denoising Normal").enabled and
+        render_layers_node.outputs.get("Denoising Albedo") and
+        render_layers_node.outputs.get("Denoising Albedo").enabled
+    )
+
+    for output in render_layers_node.outputs:
+        if not output.enabled:
+            continue
+
+        file_output_node.file_slots.new(name=output.name)
+        target_input = None
+
+        for input_socket in file_output_node.inputs:
+            if input_socket.name == output.name:
+                target_input = input_socket
+                break
+
+        if not target_input:
+            continue
+
+        should_denoise = output.name in DENOISE_PASSES and has_denoising_data
+
+        if should_denoise:
+            denoise_node = create_denoise_node(
+                tree,
+                name="Denoise_{}".format(output.name),
+                location=(rl_x + denoise_x_offset, rl_y + denoise_y_offset)
+            )
+
+            tree.links.new(output, denoise_node.inputs[0])
+            tree.links.new(render_layers_node.outputs["Denoising Normal"], denoise_node.inputs[1])
+            tree.links.new(render_layers_node.outputs["Denoising Albedo"], denoise_node.inputs[2])
+            tree.links.new(denoise_node.outputs[0], target_input)
+
+            denoise_y_offset -= 30
+        else:
+            tree.links.new(output, target_input)
+
+    logger.debug("Connected denoised passes from %s to %s", render_layers_node.name, file_output_node.name)

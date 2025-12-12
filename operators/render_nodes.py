@@ -58,7 +58,12 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
                 base_path=base_path
             )
 
-            tools.connect_enabled_passes(tree, rl_node, fo_node)
+            use_denoise = view_layer.cycles.denoising_store_passes if scene.render.engine == "CYCLES" else False
+
+            if use_denoise:
+                tools.connect_denoised_passes(tree, rl_node, fo_node)
+            else:
+                tools.connect_enabled_passes(tree, rl_node, fo_node)
 
             node_y_offset -= 400
 

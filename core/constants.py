@@ -6,6 +6,25 @@ Core Constants
         for render node generation.
 """
 
+DENOISE_PASSES = {
+    "Image",
+    "Mist"
+    "DiffDir",
+    "DiffInd",
+    "DiffCol",
+    "GlossDir",
+    "GlossInd",
+    "GlossCol",
+    "TransDir",
+    "TransInd",
+    "TransCol",
+    "VolumeDir",
+    "VolumeInd",
+    "Emit",
+    "Env",
+    "AO",
+}
+
 NODE_COLORS = {
     "file_output": (0.55, 0.33, 0.17),
     "render_layers": (0.30, 0.45, 0.30),

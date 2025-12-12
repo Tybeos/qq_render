@@ -58,6 +58,10 @@ class QQ_RENDER_PT_output_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(scene, "qq_render_clear_nodes")
 
+        if scene.render.engine == "CYCLES":
+            row = layout.row()
+            row.prop(context.view_layer.cycles, "denoising_store_passes", text="Denoise Passes")
+
         row = layout.row()
         row.scale_y = 1.5
         row.operator("qq_render.generate_nodes", icon="NODE")
