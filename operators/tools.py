@@ -50,10 +50,9 @@ def get_output_base_path(scene, view_layer):
 
 
 def setup_compositor(scene):
-    """Enables compositor nodes and returns the node tree."""
+    """Enables compositor nodes"""
     scene.use_nodes = True
     logger.debug("Compositor enabled for scene %s", scene.name)
-    return scene.node_tree
 
 
 def clear_nodes(tree):
