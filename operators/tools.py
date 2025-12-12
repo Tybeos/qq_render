@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bpy
 
-from ..core.constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES
+from ..core.constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES, SKIP_PASSES
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +110,9 @@ def connect_enabled_passes(tree, render_layers_node, file_output_node):
         if not output.enabled:
             continue
 
+        if output.name in SKIP_PASSES:
+            continue
+
         file_output_node.file_slots.new(name=output.name)
 
         for input_socket in file_output_node.inputs:
@@ -148,6 +151,9 @@ def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_
 
     for output in render_layers_node.outputs:
         if not output.enabled:
+            continue
+
+        if output.name in SKIP_PASSES:
             continue
 
         file_output_node.file_slots.new(name=output.name)

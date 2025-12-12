@@ -6,9 +6,16 @@ Core Constants
         for render node generation.
 """
 
+SKIP_PASSES = {
+    "Denoising Normal",
+    "Denoising Albedo",
+    "Denoising Depth",
+    "GreasePencil",
+}
+
 DENOISE_PASSES = {
     "Image",
-    "Mist"
+    "Mist",
     "DiffDir",
     "DiffInd",
     "DiffCol",
