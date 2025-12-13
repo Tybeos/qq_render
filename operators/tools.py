@@ -1,5 +1,4 @@
 """
-QQ Render
 Operators Tools
     Description:
         Utility functions for compositor node creation and manipulation.

@@ -1,5 +1,4 @@
 """
-QQ Render
 Core Constants
     Description:
         Application-wide constants, enums, and pass definitions

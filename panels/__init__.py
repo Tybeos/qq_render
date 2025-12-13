@@ -1,5 +1,4 @@
 """
-QQ Render
 Panels Module
     Description:
         Registers all UI panel classes for the addon.

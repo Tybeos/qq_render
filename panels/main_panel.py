@@ -1,8 +1,7 @@
 """
-QQ Render
 Main Panel
     Description:
-        Main UI panel for QQ Render addon in the View Layer properties.
+        Main UI panel for qq Render addon in the View Layer properties.
 """
 
 import logging
@@ -13,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class QQ_RENDER_PT_main_panel(bpy.types.Panel):
-    """Main panel for QQ Render in View Layer properties."""
+    """Main panel for qq Render in View Layer properties."""
 
-    bl_label = "QQ Render"
+    bl_label = "qq Render"
     bl_idname = "QQ_RENDER_PT_main_panel"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"

@@ -1,5 +1,4 @@
 """
-QQ Render
 Operators Module
     Description:
         Registers all operator classes for the addon.

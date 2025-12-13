@@ -1,5 +1,4 @@
 """
-QQ Render
 Render Nodes Operators
     Description:
         Operators for generating compositor render nodes

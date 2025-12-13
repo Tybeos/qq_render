@@ -1,5 +1,4 @@
 """
-QQ Render
 Blender Addon
     Description:
         Generates compositor render nodes based on view layers.
@@ -7,7 +6,7 @@ Blender Addon
 """
 
 bl_info = {
-    "name": "QQ Render",
+    "name": "qq Render",
     "author": "Tobias Petruj",
     "version": (1, 0, 0),
     "blender": (4, 2, 0),
@@ -17,7 +16,6 @@ bl_info = {
 }
 
 import logging
-from pathlib import Path
 
 from .core.logger_config import setup_logging
 
@@ -38,7 +36,7 @@ def register():
     for module in modules:
         module.register()
 
-    logger.debug("QQ Render addon registered with %d modules", len(modules))
+    logger.debug("qq Render addon registered with %d modules", len(modules))
 
 
 def unregister():
@@ -47,7 +45,7 @@ def unregister():
         module.unregister()
 
     modules.clear()
-    logger.debug("QQ Render addon unregistered")
+    logger.debug("qq Render addon unregistered")
 
 
 if __name__ == "__main__":
