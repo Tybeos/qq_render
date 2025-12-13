@@ -11,15 +11,29 @@ import bpy
 logger = logging.getLogger(__name__)
 
 
+def get_sorted_view_layers(scene):
+    """Returns view layers sorted by their qq_render_order property."""
+    layers = list(scene.view_layers)
+    return sorted(layers, key=lambda vl: vl.qq_render_order)
+
+
+def normalize_view_layer_order(scene):
+    """Resets order values to sequential integers starting from 0."""
+    sorted_layers = get_sorted_view_layers(scene)
+    for idx, layer in enumerate(sorted_layers):
+        layer.qq_render_order = idx
+    logger.debug("Normalized view layer order for %d layers", len(sorted_layers))
+
+
 def switch_view_layer(self, context):
     """Callback to switch the active view layer when selection changes."""
     scene = context.scene
     idx = scene.qq_render_active_view_layer_index
-    view_layers = scene.view_layers
+    sorted_layers = get_sorted_view_layers(scene)
 
-    if 0 <= idx < len(view_layers):
-        context.window.view_layer = view_layers[idx]
-        logger.debug("Switched to view layer %s", view_layers[idx].name)
+    if 0 <= idx < len(sorted_layers):
+        context.window.view_layer = sorted_layers[idx]
+        logger.debug("Switched to view layer %s", sorted_layers[idx].name)
 
 
 class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
@@ -34,6 +48,8 @@ class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
         """Executes the add view layer operator."""
         scene = context.scene
         new_layer = scene.view_layers.new(name="ViewLayer")
+        new_layer.qq_render_order = len(scene.view_layers) - 1
+        normalize_view_layer_order(scene)
         scene.qq_render_active_view_layer_index = len(scene.view_layers) - 1
         context.window.view_layer = new_layer
         self.report({"INFO"}, "Added view layer: {}".format(new_layer.name))
@@ -58,20 +74,24 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
         """Executes the remove view layer operator."""
         scene = context.scene
         idx = scene.qq_render_active_view_layer_index
-        view_layers = scene.view_layers
+        sorted_layers = get_sorted_view_layers(scene)
 
-        if idx < 0 or idx >= len(view_layers):
+        if idx < 0 or idx >= len(sorted_layers):
             self.report({"WARNING"}, "Invalid view layer selection")
             return {"CANCELLED"}
 
-        layer_name = view_layers[idx].name
-        view_layers.remove(view_layers[idx])
+        layer_to_remove = sorted_layers[idx]
+        layer_name = layer_to_remove.name
+        scene.view_layers.remove(layer_to_remove)
 
-        if scene.qq_render_active_view_layer_index >= len(view_layers):
-            scene.qq_render_active_view_layer_index = len(view_layers) - 1
+        normalize_view_layer_order(scene)
 
-        if scene.qq_render_active_view_layer_index >= 0:
-            context.window.view_layer = view_layers[scene.qq_render_active_view_layer_index]
+        if scene.qq_render_active_view_layer_index >= len(scene.view_layers):
+            scene.qq_render_active_view_layer_index = len(scene.view_layers) - 1
+
+        sorted_layers = get_sorted_view_layers(scene)
+        if scene.qq_render_active_view_layer_index >= 0 and sorted_layers:
+            context.window.view_layer = sorted_layers[scene.qq_render_active_view_layer_index]
 
         self.report({"INFO"}, "Removed view layer: {}".format(layer_name))
         logger.debug("Removed view layer %s", layer_name)
@@ -104,15 +124,21 @@ class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
         """Executes the move view layer operator."""
         scene = context.scene
         idx = scene.qq_render_active_view_layer_index
-        view_layers = scene.view_layers
-        num_layers = len(view_layers)
+        sorted_layers = get_sorted_view_layers(scene)
+        num_layers = len(sorted_layers)
 
         if self.direction == "UP" and idx > 0:
+            current_layer = sorted_layers[idx]
+            swap_layer = sorted_layers[idx - 1]
+            current_layer.qq_render_order, swap_layer.qq_render_order = swap_layer.qq_render_order, current_layer.qq_render_order
             scene.qq_render_active_view_layer_index = idx - 1
-            logger.debug("Moved selection up to index %d", idx - 1)
+            logger.debug("Moved view layer %s up", current_layer.name)
         elif self.direction == "DOWN" and idx < num_layers - 1:
+            current_layer = sorted_layers[idx]
+            swap_layer = sorted_layers[idx + 1]
+            current_layer.qq_render_order, swap_layer.qq_render_order = swap_layer.qq_render_order, current_layer.qq_render_order
             scene.qq_render_active_view_layer_index = idx + 1
-            logger.debug("Moved selection down to index %d", idx + 1)
+            logger.debug("Moved view layer %s down", current_layer.name)
 
         return {"FINISHED"}
 
@@ -129,8 +155,9 @@ class QQ_RENDER_OT_sync_active_view_layer(bpy.types.Operator):
         """Executes the sync operator."""
         scene = context.scene
         active_vl = context.view_layer
+        sorted_layers = get_sorted_view_layers(scene)
 
-        for idx, vl in enumerate(scene.view_layers):
+        for idx, vl in enumerate(sorted_layers):
             if vl == active_vl:
                 scene.qq_render_active_view_layer_index = idx
                 logger.debug("Synced to view layer %s at index %d", vl.name, idx)
@@ -159,11 +186,18 @@ def register():
         update=switch_view_layer
     )
 
+    bpy.types.ViewLayer.qq_render_order = bpy.props.IntProperty(
+        name="Render Order",
+        description="Order of view layer for rendering",
+        default=0
+    )
+
     logger.debug("Registered %d view layer operator classes", len(classes))
 
 
 def unregister():
     """Unregisters view layer operator classes and properties."""
+    del bpy.types.ViewLayer.qq_render_order
     del bpy.types.Scene.qq_render_active_view_layer_index
 
     for cls in reversed(classes):

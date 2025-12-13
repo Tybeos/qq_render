@@ -28,8 +28,8 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         active_vl = context.view_layer
         current_idx = scene.qq_render_active_view_layer_index
-        view_layers_list = list(scene.view_layers)
-        expected_idx = view_layers_list.index(active_vl) if active_vl in view_layers_list else 0
+        sorted_layers = sorted(scene.view_layers, key=lambda vl: vl.qq_render_order)
+        expected_idx = sorted_layers.index(active_vl) if active_vl in sorted_layers else 0
         list_synced = current_idx == expected_idx
 
         if not list_synced:
