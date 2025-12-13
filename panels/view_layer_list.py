@@ -20,20 +20,6 @@ class QQ_RENDER_UL_view_layers(bpy.types.UIList):
         row.prop(item, "name", text="", emboss=False, translate=False)
         row.prop(item, "use", text="", icon="RESTRICT_RENDER_OFF" if item.use else "RESTRICT_RENDER_ON")
 
-    def filter_items(self, context, data, propname):
-        """Sorts view layers by qq_render_order property."""
-        items = getattr(data, propname)
-        helper_funcs = bpy.types.UI_UL_list
-
-        filtered = []
-        ordered = helper_funcs.sort_items_helper(
-            [(idx, item) for idx, item in enumerate(items)],
-            lambda x: x[1].qq_render_order,
-            False
-        )
-
-        return filtered, ordered
-
 
 classes = [
     QQ_RENDER_UL_view_layers,
