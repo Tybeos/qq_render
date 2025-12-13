@@ -11,15 +11,26 @@ import bpy
 logger = logging.getLogger(__name__)
 
 
-def switch_view_layer(self, context):
-    """Callback to switch the active view layer when selection changes."""
-    scene = context.scene
-    idx = scene.qq_render_active_view_layer_index
-    view_layers = scene.view_layers
+def get_active_view_layer_index(self):
+    """Returns the index of the active view layer in the scene."""
+    try:
+        view_layer = bpy.context.window.view_layer
+        for idx, vl in enumerate(self.view_layers):
+            if vl == view_layer:
+                return idx
+    except (AttributeError, RuntimeError):
+        pass
+    return 0
 
-    if 0 <= idx < len(view_layers):
-        context.window.view_layer = view_layers[idx]
-        logger.debug("Switched to view layer %s", view_layers[idx].name)
+
+def set_active_view_layer_index(self, value):
+    """Sets the active view layer by index."""
+    try:
+        if 0 <= value < len(self.view_layers):
+            bpy.context.window.view_layer = self.view_layers[value]
+            logger.debug("Set active view layer to %s", self.view_layers[value].name)
+    except (AttributeError, RuntimeError):
+        pass
 
 
 class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
@@ -34,7 +45,6 @@ class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
         """Executes the add view layer operator."""
         scene = context.scene
         new_layer = scene.view_layers.new(name="ViewLayer")
-        scene.qq_render_active_view_layer_index = len(scene.view_layers) - 1
         context.window.view_layer = new_layer
         self.report({"INFO"}, "Added view layer: {}".format(new_layer.name))
         logger.debug("Added new view layer %s", new_layer.name)
@@ -57,21 +67,25 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
     def execute(self, context):
         """Executes the remove view layer operator."""
         scene = context.scene
-        idx = scene.qq_render_active_view_layer_index
         view_layers = scene.view_layers
+        active_vl = context.window.view_layer
 
-        if idx < 0 or idx >= len(view_layers):
+        idx = None
+        for i, vl in enumerate(view_layers):
+            if vl == active_vl:
+                idx = i
+                break
+
+        if idx is None:
             self.report({"WARNING"}, "Invalid view layer selection")
             return {"CANCELLED"}
 
         layer_name = view_layers[idx].name
         view_layers.remove(view_layers[idx])
 
-        if scene.qq_render_active_view_layer_index >= len(view_layers):
-            scene.qq_render_active_view_layer_index = len(view_layers) - 1
-
-        if scene.qq_render_active_view_layer_index >= 0:
-            context.window.view_layer = view_layers[scene.qq_render_active_view_layer_index]
+        new_idx = min(idx, len(view_layers) - 1)
+        if new_idx >= 0:
+            context.window.view_layer = view_layers[new_idx]
 
         self.report({"INFO"}, "Removed view layer: {}".format(layer_name))
         logger.debug("Removed view layer %s", layer_name)
@@ -79,11 +93,11 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
 
 
 class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
-    """Moves the selected view layer up or down in the list."""
+    """Moves the selected view layer up or down in the order."""
 
     bl_idname = "qq_render.view_layer_move"
     bl_label = "Move View Layer"
-    bl_description = "Move the selected view layer up or down"
+    bl_description = "Move the selected view layer up or down in the order"
     bl_options = {"REGISTER", "UNDO"}
 
     direction: bpy.props.EnumProperty(
@@ -103,38 +117,25 @@ class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
     def execute(self, context):
         """Executes the move view layer operator."""
         scene = context.scene
-        idx = scene.qq_render_active_view_layer_index
         view_layers = scene.view_layers
+        active_vl = context.window.view_layer
         num_layers = len(view_layers)
 
-        if self.direction == "UP" and idx > 0:
-            scene.qq_render_active_view_layer_index = idx - 1
-            logger.debug("Moved selection up to index %d", idx - 1)
-        elif self.direction == "DOWN" and idx < num_layers - 1:
-            scene.qq_render_active_view_layer_index = idx + 1
-            logger.debug("Moved selection down to index %d", idx + 1)
-
-        return {"FINISHED"}
-
-
-class QQ_RENDER_OT_sync_active_view_layer(bpy.types.Operator):
-    """Synchronizes the list selection with the active view layer."""
-
-    bl_idname = "qq_render.sync_active_view_layer"
-    bl_label = "Sync Active View Layer"
-    bl_description = "Sync list selection with the current active view layer"
-    bl_options = {"REGISTER"}
-
-    def execute(self, context):
-        """Executes the sync operator."""
-        scene = context.scene
-        active_vl = context.view_layer
-
-        for idx, vl in enumerate(scene.view_layers):
+        idx = None
+        for i, vl in enumerate(view_layers):
             if vl == active_vl:
-                scene.qq_render_active_view_layer_index = idx
-                logger.debug("Synced to view layer %s at index %d", vl.name, idx)
+                idx = i
                 break
+
+        if idx is None:
+            return {"CANCELLED"}
+
+        if self.direction == "UP" and idx > 0:
+            view_layers.move(idx, idx - 1)
+            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx - 1)
+        elif self.direction == "DOWN" and idx < num_layers - 1:
+            view_layers.move(idx, idx + 1)
+            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx + 1)
 
         return {"FINISHED"}
 
@@ -143,7 +144,6 @@ classes = [
     QQ_RENDER_OT_view_layer_add,
     QQ_RENDER_OT_view_layer_remove,
     QQ_RENDER_OT_view_layer_move,
-    QQ_RENDER_OT_sync_active_view_layer,
 ]
 
 
@@ -155,8 +155,8 @@ def register():
     bpy.types.Scene.qq_render_active_view_layer_index = bpy.props.IntProperty(
         name="Active View Layer Index",
         description="Index of the active view layer in the list",
-        default=0,
-        update=switch_view_layer
+        get=get_active_view_layer_index,
+        set=set_active_view_layer_index
     )
 
     logger.debug("Registered %d view layer operator classes", len(classes))
