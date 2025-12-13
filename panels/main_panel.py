@@ -43,14 +43,34 @@ class QQ_RENDER_PT_output_panel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
 
-        view_layer_count = len(scene.view_layers)
-        renderable_count = sum(
-            1 for vl in scene.view_layers
-            if getattr(vl, "use", None) or getattr(vl, "use_for_render", True)
-        )
+        active_vl = context.view_layer
+        current_idx = scene.qq_render_active_view_layer_index
+        view_layers_list = list(scene.view_layers)
+        expected_idx = view_layers_list.index(active_vl) if active_vl in view_layers_list else 0
+        list_synced = current_idx == expected_idx
+
+        if not list_synced:
+            row = layout.row()
+            row.operator("qq_render.sync_active_view_layer", icon="FILE_REFRESH")
 
         row = layout.row()
-        row.label(text="View Layers: {} ({} renderable)".format(view_layer_count, renderable_count))
+        row.enabled = list_synced
+        row.template_list(
+            "QQ_RENDER_UL_view_layers",
+            "",
+            scene,
+            "view_layers",
+            scene,
+            "qq_render_active_view_layer_index",
+            rows=5
+        )
+
+        col = row.column(align=True)
+        col.operator("qq_render.view_layer_add", icon="ADD", text="")
+        col.operator("qq_render.view_layer_remove", icon="REMOVE", text="")
+        col.separator()
+        col.operator("qq_render.view_layer_move", icon="TRIA_UP", text="").direction = "UP"
+        col.operator("qq_render.view_layer_move", icon="TRIA_DOWN", text="").direction = "DOWN"
 
         layout.separator()
 
@@ -65,7 +85,7 @@ class QQ_RENDER_PT_output_panel(bpy.types.Panel):
         row.scale_y = 1.5
         row.operator("qq_render.generate_nodes", icon="NODE")
 
-        logger.debug("Drew output panel with %d view layers", view_layer_count)
+        logger.debug("Drew output panel with %d view layers", len(scene.view_layers))
 
 
 class QQ_RENDER_PT_info_panel(bpy.types.Panel):

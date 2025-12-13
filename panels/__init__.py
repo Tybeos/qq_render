@@ -6,11 +6,13 @@ Panels Module
 
 import logging
 
+from . import view_layer_list
 from . import main_panel
 
 logger = logging.getLogger(__name__)
 
 modules = [
+    view_layer_list,
     main_panel,
 ]
 
