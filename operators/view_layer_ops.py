@@ -123,25 +123,31 @@ class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
     def execute(self, context):
         """Executes the move view layer operator."""
         scene = context.scene
-        view_layers = scene.view_layers
+        view_layers = list(scene.view_layers)
         active_vl = context.window.view_layer
-        num_layers = len(view_layers)
 
-        idx = None
-        for i, vl in enumerate(view_layers):
+        sorted_layers = sorted(view_layers, key=lambda vl: vl.qq_render_order)
+        current_order = active_vl.qq_render_order
+
+        sorted_idx = None
+        for i, vl in enumerate(sorted_layers):
             if vl == active_vl:
-                idx = i
+                sorted_idx = i
                 break
 
-        if idx is None:
+        if sorted_idx is None:
             return {"CANCELLED"}
 
-        if self.direction == "UP" and idx > 0:
-            view_layers.move(idx, idx - 1)
-            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx - 1)
-        elif self.direction == "DOWN" and idx < num_layers - 1:
-            view_layers.move(idx, idx + 1)
-            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx + 1)
+        if self.direction == "UP" and sorted_idx > 0:
+            swap_vl = sorted_layers[sorted_idx - 1]
+            active_vl.qq_render_order = swap_vl.qq_render_order
+            swap_vl.qq_render_order = current_order
+            logger.debug("Swapped order of %s and %s", active_vl.name, swap_vl.name)
+        elif self.direction == "DOWN" and sorted_idx < len(sorted_layers) - 1:
+            swap_vl = sorted_layers[sorted_idx + 1]
+            active_vl.qq_render_order = swap_vl.qq_render_order
+            swap_vl.qq_render_order = current_order
+            logger.debug("Swapped order of %s and %s", active_vl.name, swap_vl.name)
 
         return {"FINISHED"}
 
@@ -229,11 +235,18 @@ def register():
         set=set_active_view_layer_index
     )
 
+    bpy.types.ViewLayer.qq_render_order = bpy.props.IntProperty(
+        name="qq Render Order",
+        description="Order of the view layer in qq Render list",
+        default=0
+    )
+
     logger.debug("Registered %d view layer operator classes", len(classes))
 
 
 def unregister():
     """Unregisters view layer operator classes and properties."""
+    del bpy.types.ViewLayer.qq_render_order
     del bpy.types.Scene.qq_render_active_view_layer_index
 
     for cls in reversed(classes):
