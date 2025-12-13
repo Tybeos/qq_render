@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_renderable_view_layers(scene):
-    """Returns list of view layers that are enabled for rendering, sorted by order."""
+    """Returns list of view layers that are enabled for rendering."""
     renderable = []
 
     for view_layer in scene.view_layers:
@@ -26,8 +26,6 @@ def get_renderable_view_layers(scene):
 
         if use_render:
             renderable.append(view_layer)
-
-    renderable.sort(key=lambda vl: vl.qq_render_order)
 
     logger.debug("Found %d renderable view layers", len(renderable))
     return renderable
