@@ -140,10 +140,77 @@ class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class QQ_RENDER_OT_view_layer_copy(bpy.types.Operator):
+    """Copies the active view layer settings to clipboard."""
+
+    bl_idname = "qq_render.view_layer_copy"
+    bl_label = "Copy View Layer Settings"
+    bl_description = "Copy the active view layer settings"
+
+    def execute(self, context):
+        """Executes the copy view layer settings operator."""
+        view_layer = context.window.view_layer
+        scene = context.scene
+
+        scene.qq_render_clipboard_passes = {}
+
+        for attr in dir(view_layer):
+            if attr.startswith("use_pass_"):
+                scene.qq_render_clipboard_passes[attr] = getattr(view_layer, attr)
+
+        if hasattr(view_layer, "cycles"):
+            scene.qq_render_clipboard_cycles = {
+                "denoising_store_passes": view_layer.cycles.denoising_store_passes,
+                "use_denoising": view_layer.cycles.use_denoising,
+            }
+        else:
+            scene.qq_render_clipboard_cycles = {}
+
+        scene.qq_render_clipboard_source = view_layer.name
+
+        self.report({"INFO"}, "Copied settings from: {}".format(view_layer.name))
+        logger.debug("Copied view layer settings from %s", view_layer.name)
+        return {"FINISHED"}
+
+
+class QQ_RENDER_OT_view_layer_paste(bpy.types.Operator):
+    """Pastes the clipboard settings to the active view layer."""
+
+    bl_idname = "qq_render.view_layer_paste"
+    bl_label = "Paste View Layer Settings"
+    bl_description = "Paste the clipboard settings to the active view layer"
+
+    @classmethod
+    def poll(cls, context):
+        """Checks if clipboard has data."""
+        scene = context.scene
+        return hasattr(scene, "qq_render_clipboard_passes") and scene.qq_render_clipboard_passes
+
+    def execute(self, context):
+        """Executes the paste view layer settings operator."""
+        view_layer = context.window.view_layer
+        scene = context.scene
+
+        for attr, value in scene.qq_render_clipboard_passes.items():
+            if hasattr(view_layer, attr):
+                setattr(view_layer, attr, value)
+
+        if hasattr(view_layer, "cycles") and scene.qq_render_clipboard_cycles:
+            for attr, value in scene.qq_render_clipboard_cycles.items():
+                if hasattr(view_layer.cycles, attr):
+                    setattr(view_layer.cycles, attr, value)
+
+        self.report({"INFO"}, "Pasted settings to: {}".format(view_layer.name))
+        logger.debug("Pasted view layer settings to %s", view_layer.name)
+        return {"FINISHED"}
+
+
 classes = [
     QQ_RENDER_OT_view_layer_add,
     QQ_RENDER_OT_view_layer_remove,
     QQ_RENDER_OT_view_layer_move,
+    QQ_RENDER_OT_view_layer_copy,
+    QQ_RENDER_OT_view_layer_paste,
 ]
 
 

@@ -43,6 +43,9 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         col.separator()
         col.operator("qq_render.view_layer_move", icon="TRIA_UP", text="").direction = "UP"
         col.operator("qq_render.view_layer_move", icon="TRIA_DOWN", text="").direction = "DOWN"
+        col.separator()
+        col.operator("qq_render.view_layer_copy", icon="COPYDOWN", text="")
+        col.operator("qq_render.view_layer_paste", icon="PASTEDOWN", text="")
 
         layout.separator()
 
