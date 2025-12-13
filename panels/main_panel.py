@@ -24,23 +24,6 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
     def draw(self, context):
         """Draws the main panel content."""
         layout = self.layout
-        logger.debug("Drawing main panel")
-
-
-class QQ_RENDER_PT_output_panel(bpy.types.Panel):
-    """Output generation subpanel."""
-
-    bl_label = "Output"
-    bl_idname = "QQ_RENDER_PT_output_panel"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "view_layer"
-    bl_parent_id = "QQ_RENDER_PT_main_panel"
-    bl_order = 1
-
-    def draw(self, context):
-        """Draws the output panel with generation controls."""
-        layout = self.layout
         scene = context.scene
 
         active_vl = context.view_layer
@@ -85,37 +68,11 @@ class QQ_RENDER_PT_output_panel(bpy.types.Panel):
         row.scale_y = 1.5
         row.operator("qq_render.generate_nodes", icon="NODE")
 
-        logger.debug("Drew output panel with %d view layers", len(scene.view_layers))
-
-
-class QQ_RENDER_PT_info_panel(bpy.types.Panel):
-    """Information and status subpanel."""
-
-    bl_label = "Info"
-    bl_idname = "QQ_RENDER_PT_info_panel"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "view_layer"
-    bl_parent_id = "QQ_RENDER_PT_main_panel"
-    bl_order = 2
-    bl_options = {"DEFAULT_CLOSED"}
-
-    def draw(self, context):
-        """Draws the info panel with current settings."""
-        layout = self.layout
-        scene = context.scene
-
-        col = layout.column(align=True)
-        col.label(text="Engine: {}".format(scene.render.engine))
-        col.label(text="File: {}".format(bpy.path.basename(bpy.data.filepath) or "Not Saved"))
-
-        logger.debug("Drew info panel")
+        logger.debug("Drew main panel with %d view layers", len(scene.view_layers))
 
 
 classes = [
     QQ_RENDER_PT_main_panel,
-    QQ_RENDER_PT_output_panel,
-    QQ_RENDER_PT_info_panel,
 ]
 
 
