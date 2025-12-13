@@ -26,18 +26,7 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
 
-        active_vl = context.view_layer
-        current_idx = scene.qq_render_active_view_layer_index
-        sorted_layers = sorted(scene.view_layers, key=lambda vl: vl.qq_render_order)
-        expected_idx = sorted_layers.index(active_vl) if active_vl in sorted_layers else 0
-        list_synced = current_idx == expected_idx
-
-        if not list_synced:
-            row = layout.row()
-            row.operator("qq_render.sync_active_view_layer", icon="FILE_REFRESH")
-
         row = layout.row()
-        row.enabled = list_synced
         row.template_list(
             "QQ_RENDER_UL_view_layers",
             "",
