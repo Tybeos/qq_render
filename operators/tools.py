@@ -294,3 +294,16 @@ def create_composite_node(tree, location):
     node.color = NODE_COLORS.get("composite", (0.3, 0.5, 0.3))
     logger.debug("Created Composite node at %s", location)
     return node
+
+
+def get_composite_render_layers(render_layers_nodes, scene):
+    """Returns render layer nodes that have use_composite enabled."""
+    nodes = []
+
+    for node in render_layers_nodes:
+        view_layer = scene.view_layers.get(node.layer)
+        if view_layer and view_layer.qq_render_use_composite:
+            nodes.append(node)
+
+    logger.debug("Found %d render layer nodes for composite", len(nodes))
+    return nodes

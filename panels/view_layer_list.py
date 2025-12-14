@@ -22,6 +22,7 @@ class QQ_RENDER_UL_view_layers(bpy.types.UIList):
         if context.scene.render.engine == "CYCLES" and hasattr(item, "cycles"):
             row.prop(item.cycles, "denoising_store_passes", text="", icon="SHADERFX")
 
+        row.prop(item, "qq_render_use_composite", text="", icon="NODE_COMPOSITING")
         row.prop(item, "use", text="", icon="RESTRICT_RENDER_OFF" if item.use else "RESTRICT_RENDER_ON")
 
 
@@ -31,14 +32,23 @@ classes = [
 
 
 def register():
-    """Registers UIList classes."""
+    """Registers UIList classes and properties."""
     for cls in classes:
         bpy.utils.register_class(cls)
+
+    bpy.types.ViewLayer.qq_render_use_composite = bpy.props.BoolProperty(
+        name="Use Composite",
+        description="Include this view layer in composite output",
+        default=True
+    )
+
     logger.debug("Registered %d UIList classes", len(classes))
 
 
 def unregister():
-    """Unregisters UIList classes."""
+    """Unregisters UIList classes and properties."""
+    del bpy.types.ViewLayer.qq_render_use_composite
+
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     logger.debug("Unregistered UIList classes")
