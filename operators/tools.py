@@ -307,20 +307,17 @@ def build_composite_chain(tree, scene, composite_nodes, location):
     image_node = create_image_node(tree, scene, (current_x, current_y))
     has_background = image_node is not None
 
-    if has_background:
-        current_x += 300
+    current_x += 600
 
     total_inputs = len(composite_nodes) + (1 if has_background else 0)
     alpha_count = total_inputs - 1
 
-    composite_x = current_x + (alpha_count * x_offset) + 200
+    composite_x = current_x + (alpha_count * x_offset) + (200 if alpha_count else 0)
     composite_output = create_composite_node(tree, (composite_x, current_y))
 
     if total_inputs == 1:
         source_node = image_node if has_background else composite_nodes[0]
         tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
-        if source_node.outputs.get("Alpha"):
-            tree.links.new(source_node.outputs["Alpha"], composite_output.inputs["Alpha"])
         logger.debug("Connected single source to composite")
         return composite_output
 
