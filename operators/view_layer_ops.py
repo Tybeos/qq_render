@@ -98,54 +98,6 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
-    """Moves the selected view layer up or down in the order."""
-
-    bl_idname = "qq_render.view_layer_move"
-    bl_label = "Move View Layer"
-    bl_description = "Move the selected view layer up or down in the order"
-    bl_options = {"REGISTER", "UNDO"}
-
-    direction: bpy.props.EnumProperty(
-        name="Direction",
-        items=[
-            ("UP", "Up", "Move view layer up"),
-            ("DOWN", "Down", "Move view layer down"),
-        ],
-        default="UP"
-    )
-
-    @classmethod
-    def poll(cls, context):
-        """Checks if the scene has view layers."""
-        return len(context.scene.view_layers) > 1
-
-    def execute(self, context):
-        """Executes the move view layer operator."""
-        scene = context.scene
-        view_layers = scene.view_layers
-        active_vl = context.window.view_layer
-        num_layers = len(view_layers)
-
-        idx = None
-        for i, vl in enumerate(view_layers):
-            if vl == active_vl:
-                idx = i
-                break
-
-        if idx is None:
-            return {"CANCELLED"}
-
-        if self.direction == "UP" and idx > 0:
-            view_layers.move(idx, idx - 1)
-            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx - 1)
-        elif self.direction == "DOWN" and idx < num_layers - 1:
-            view_layers.move(idx, idx + 1)
-            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx + 1)
-
-        return {"FINISHED"}
-
-
 class QQ_RENDER_OT_view_layer_copy(bpy.types.Operator):
     """Copies the active view layer settings to clipboard."""
 
@@ -211,7 +163,6 @@ class QQ_RENDER_OT_view_layer_paste(bpy.types.Operator):
 classes = [
     QQ_RENDER_OT_view_layer_add,
     QQ_RENDER_OT_view_layer_remove,
-    QQ_RENDER_OT_view_layer_move,
     QQ_RENDER_OT_view_layer_copy,
     QQ_RENDER_OT_view_layer_paste,
 ]
