@@ -38,11 +38,12 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
 
         output_x_position = 600
         node_y_offset = tools.get_lowest_node_position(tree) - 50
+        node_rl_offset = node_y_offset - 300
         render_layers_nodes = []
 
         for view_layer in view_layers:
-            rl_location = (0, node_y_offset)
-            fo_location = (output_x_position, node_y_offset)
+            rl_location = (0, node_rl_offset)
+            fo_location = (output_x_position, node_rl_offset)
             rl_node = tools.create_render_layers_node(tree, view_layer, rl_location)
             render_layers_nodes.append(rl_node)
 
@@ -61,11 +62,11 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             else:
                 tools.connect_enabled_passes(tree, rl_node, fo_node)
 
-            node_y_offset = tools.estimate_lowest_node_position(tree) - 50
+            node_rl_offset = tools.estimate_lowest_node_position(tree) - 50
 
         composite_render_nodes = tools.get_composite_render_layers(render_layers_nodes, scene)
         if composite_render_nodes:
-            composite_location = (output_x_position + 400, 0)
+            composite_location = (output_x_position, node_y_offset)
             tools.build_composite_chain(tree, scene, composite_render_nodes, composite_location)
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
