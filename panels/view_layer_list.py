@@ -18,6 +18,10 @@ class QQ_RENDER_UL_view_layers(bpy.types.UIList):
         """Draws a single view layer item in the list."""
         row = layout.row(align=True)
         row.prop(item, "name", text="", emboss=False, translate=False)
+
+        if context.scene.render.engine == "CYCLES" and hasattr(item, "cycles"):
+            row.prop(item.cycles, "denoising_store_passes", text="", icon="SHADERFX")
+
         row.prop(item, "use", text="", icon="RESTRICT_RENDER_OFF" if item.use else "RESTRICT_RENDER_ON")
 
 

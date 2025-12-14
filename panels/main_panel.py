@@ -47,11 +47,8 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         layout.separator()
 
         row = layout.row()
+        row.alignment = "CENTER"
         row.prop(scene, "qq_render_clear_nodes")
-
-        if scene.render.engine == "CYCLES":
-            row = layout.row()
-            row.prop(context.view_layer.cycles, "denoising_store_passes", text="Denoise Passes")
 
         row = layout.row()
         row.scale_y = 1.5
