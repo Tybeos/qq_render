@@ -17,17 +17,11 @@ view_layer_clipboard = {
 }
 
 
-def get_sorted_view_layers_for_index(scene):
-    """Returns view layers sorted by qq_render_order for index operations."""
-    return sorted(scene.view_layers, key=lambda vl: vl.get("qq_render_order", 0))
-
-
 def get_active_view_layer_index(self):
-    """Returns the index of the active view layer in the sorted list."""
+    """Returns the index of the active view layer in the scene."""
     try:
         view_layer = bpy.context.window.view_layer
-        sorted_layers = get_sorted_view_layers_for_index(self)
-        for idx, vl in enumerate(sorted_layers):
+        for idx, vl in enumerate(self.view_layers):
             if vl == view_layer:
                 return idx
     except (AttributeError, RuntimeError):
@@ -36,33 +30,13 @@ def get_active_view_layer_index(self):
 
 
 def set_active_view_layer_index(self, value):
-    """Sets the active view layer by index in the sorted list."""
+    """Sets the active view layer by index."""
     try:
-        sorted_layers = get_sorted_view_layers_for_index(self)
-        if 0 <= value < len(sorted_layers):
-            bpy.context.window.view_layer = sorted_layers[value]
-            logger.debug("Set active view layer to %s", sorted_layers[value].name)
+        if 0 <= value < len(self.view_layers):
+            bpy.context.window.view_layer = self.view_layers[value]
+            logger.debug("Set active view layer to %s", self.view_layers[value].name)
     except (AttributeError, RuntimeError):
         pass
-
-
-def get_next_order_value(scene):
-    """Returns the next available order value for a new view layer."""
-    max_order = 0
-    for vl in scene.view_layers:
-        order = vl.get("qq_render_order", 0)
-        if order > max_order:
-            max_order = order
-    return max_order + 1
-
-
-def initialize_order_values(scene):
-    """Initializes order values for view layers that don't have them set."""
-    needs_init = all(vl.get("qq_render_order", 0) == 0 for vl in scene.view_layers)
-    if needs_init and len(scene.view_layers) > 1:
-        for idx, vl in enumerate(scene.view_layers):
-            vl["qq_render_order"] = idx
-        logger.debug("Initialized order values for %d view layers", len(scene.view_layers))
 
 
 class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
@@ -76,12 +50,10 @@ class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
     def execute(self, context):
         """Executes the add view layer operator."""
         scene = context.scene
-        new_order = get_next_order_value(scene)
         new_layer = scene.view_layers.new(name="ViewLayer")
-        new_layer["qq_render_order"] = new_order
         context.window.view_layer = new_layer
         self.report({"INFO"}, "Added view layer: {}".format(new_layer.name))
-        logger.debug("Added new view layer %s with order %d", new_layer.name, new_order)
+        logger.debug("Added new view layer %s", new_layer.name)
         return {"FINISHED"}
 
 
@@ -126,76 +98,51 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def get_view_layer_order(view_layer):
-    """Returns the order value for a view layer."""
-    return view_layer.get("qq_render_order", 0)
-
-
-def set_view_layer_order(view_layer, value):
-    """Sets the order value for a view layer."""
-    view_layer["qq_render_order"] = value
-
-
-def get_sorted_view_layers(scene):
-    """Returns view layers sorted by qq_render_order."""
-    return sorted(scene.view_layers, key=lambda vl: get_view_layer_order(vl))
-
-
 class QQ_RENDER_OT_view_layer_move(bpy.types.Operator):
-    """Swaps the order value of selected view layer with adjacent layer."""
+    """Moves the selected view layer up or down in the order."""
 
     bl_idname = "qq_render.view_layer_move"
     bl_label = "Move View Layer"
-    bl_description = "Swap the order of selected view layer with adjacent layer in the list"
+    bl_description = "Move the selected view layer up or down in the order"
     bl_options = {"REGISTER", "UNDO"}
 
     direction: bpy.props.EnumProperty(
         name="Direction",
         items=[
-            ("UP", "Up", "Swap order with layer above"),
-            ("DOWN", "Down", "Swap order with layer below"),
+            ("UP", "Up", "Move view layer up"),
+            ("DOWN", "Down", "Move view layer down"),
         ],
         default="UP"
     )
 
     @classmethod
     def poll(cls, context):
-        """Checks if there are at least 2 view layers."""
+        """Checks if the scene has view layers."""
         return len(context.scene.view_layers) > 1
 
     def execute(self, context):
-        """Swaps order values of current layer with adjacent layer."""
+        """Executes the move view layer operator."""
         scene = context.scene
+        view_layers = scene.view_layers
         active_vl = context.window.view_layer
+        num_layers = len(view_layers)
 
-        initialize_order_values(scene)
-        sorted_layers = get_sorted_view_layers(scene)
-
-        current_idx = None
-        for i, vl in enumerate(sorted_layers):
+        idx = None
+        for i, vl in enumerate(view_layers):
             if vl == active_vl:
-                current_idx = i
+                idx = i
                 break
 
-        if current_idx is None:
+        if idx is None:
             return {"CANCELLED"}
 
-        if self.direction == "UP" and current_idx > 0:
-            swap_idx = current_idx - 1
-        elif self.direction == "DOWN" and current_idx < len(sorted_layers) - 1:
-            swap_idx = current_idx + 1
-        else:
-            return {"CANCELLED"}
+        if self.direction == "UP" and idx > 0:
+            view_layers.move(idx, idx - 1)
+            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx - 1)
+        elif self.direction == "DOWN" and idx < num_layers - 1:
+            view_layers.move(idx, idx + 1)
+            logger.debug("Moved view layer %s from %d to %d", active_vl.name, idx, idx + 1)
 
-        swap_vl = sorted_layers[swap_idx]
-
-        current_order = get_view_layer_order(active_vl)
-        swap_order = get_view_layer_order(swap_vl)
-
-        set_view_layer_order(active_vl, swap_order)
-        set_view_layer_order(swap_vl, current_order)
-
-        logger.debug("Swapped order of %s (%d) with %s (%d)", active_vl.name, swap_order, swap_vl.name, current_order)
         return {"FINISHED"}
 
 
