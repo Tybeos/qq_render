@@ -213,3 +213,84 @@ def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_
             tree.links.new(output, target_input)
 
     logger.debug("Connected denoised passes from %s to %s", render_layers_node.name, file_output_node.name)
+
+
+def create_image_node(tree, scene, location):
+    """Creates an Image node from active camera background images if available."""
+    camera = scene.camera
+
+    if not camera:
+        logger.debug("No active camera in scene")
+        return None
+
+    camera_data = camera.data
+
+    if not camera_data.background_images:
+        logger.debug("Camera %s has no background images", camera.name)
+        return None
+
+    visible_bg_images = [bg for bg in camera_data.background_images if bg.show_background_image]
+
+    if not visible_bg_images:
+        logger.debug("Camera %s has no visible background images", camera.name)
+        return None
+
+    bg_image = visible_bg_images[0]
+
+    if bg_image.source != "IMAGE" or not bg_image.image:
+        logger.debug("Background image source is not IMAGE or no image assigned")
+        return None
+
+    node = tree.nodes.new(type="CompositorNodeImage")
+    node.image = bg_image.image
+    node.location = location
+    node.use_custom_color = True
+    node.color = NODE_COLORS.get("image", (0.3, 0.3, 0.3))
+
+    bg_user = bg_image.image_user
+
+    node.frame_start = bg_user.frame_start
+    node.frame_offset = bg_user.frame_offset
+    node.frame_duration = bg_user.frame_duration
+    node.use_auto_refresh = bg_user.use_auto_refresh
+    node.use_cyclic = bg_user.use_cyclic
+
+    logger.debug("Created Image node from camera background %s at %s", bg_image.image.name, location)
+    return node
+
+
+def create_alpha_over_nodes(tree, location, count=2):
+    """Creates a chain of Alpha Over nodes for compositing multiple layers."""
+    if count < 2:
+        logger.debug("Alpha Over chain requires at least 2 inputs, got %d", count)
+        return []
+
+    nodes = []
+    x_offset = 200
+    current_x = location[0]
+    current_y = location[1]
+
+    for i in range(count - 1):
+        node = tree.nodes.new(type="CompositorNodeAlphaOver")
+        node.name = "Alpha_Over_{}".format(i + 1)
+        node.label = "Alpha Over {}".format(i + 1)
+        node.location = (current_x + (i * x_offset), current_y)
+        node.use_custom_color = True
+        node.color = NODE_COLORS.get("alpha_over", (0.4, 0.4, 0.4))
+        nodes.append(node)
+
+        if i > 0:
+            tree.links.new(nodes[i - 1].outputs[0], node.inputs[1])
+
+    logger.debug("Created %d Alpha Over nodes at %s", len(nodes), location)
+    return nodes
+
+
+def create_composite_node(tree, location):
+    """Creates a Composite output node."""
+    node = tree.nodes.new(type="CompositorNodeComposite")
+    node.location = location
+    node.use_custom_color = True
+    node.color = NODE_COLORS.get("composite", (0.3, 0.5, 0.3))
+    logger.debug("Created Composite node at %s", location)
+    return node
