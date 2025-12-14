@@ -259,31 +259,16 @@ def create_image_node(tree, scene, location):
     return node
 
 
-def create_alpha_over_nodes(tree, location, count=2):
-    """Creates a chain of Alpha Over nodes for compositing multiple layers."""
-    if count < 2:
-        logger.debug("Alpha Over chain requires at least 2 inputs, got %d", count)
-        return []
-
-    nodes = []
-    x_offset = 200
-    current_x = location[0]
-    current_y = location[1]
-
-    for i in range(count - 1):
-        node = tree.nodes.new(type="CompositorNodeAlphaOver")
-        node.name = "Alpha_Over_{}".format(i + 1)
-        node.label = "Alpha Over {}".format(i + 1)
-        node.location = (current_x + (i * x_offset), current_y)
-        node.use_custom_color = True
-        node.color = NODE_COLORS.get("alpha_over", (0.4, 0.4, 0.4))
-        nodes.append(node)
-
-        if i > 0:
-            tree.links.new(nodes[i - 1].outputs[0], node.inputs[1])
-
-    logger.debug("Created %d Alpha Over nodes at %s", len(nodes), location)
-    return nodes
+def create_alpha_over_node(tree, location, name="Alpha_Over"):
+    """Creates a single Alpha Over node."""
+    node = tree.nodes.new(type="CompositorNodeAlphaOver")
+    node.name = name
+    node.label = name
+    node.location = location
+    node.use_custom_color = True
+    node.color = NODE_COLORS.get("alpha_over", (0.4, 0.4, 0.4))
+    logger.debug("Created Alpha Over node %s at %s", name, location)
+    return node
 
 
 def create_composite_node(tree, location):
@@ -307,3 +292,67 @@ def get_composite_render_layers(render_layers_nodes, scene):
 
     logger.debug("Found %d render layer nodes for composite", len(nodes))
     return nodes
+
+
+def build_composite_chain(tree, scene, composite_nodes, location):
+    """Builds composite chain from render layer nodes with optional background image."""
+    if not composite_nodes:
+        logger.debug("No composite nodes provided")
+        return None
+
+    current_x = location[0]
+    current_y = location[1]
+    x_offset = 200
+
+    image_node = create_image_node(tree, scene, (current_x, current_y))
+    has_background = image_node is not None
+
+    if has_background:
+        current_x += 300
+
+    total_inputs = len(composite_nodes) + (1 if has_background else 0)
+    alpha_count = total_inputs - 1
+
+    composite_x = current_x + (alpha_count * x_offset) + 200
+    composite_output = create_composite_node(tree, (composite_x, current_y))
+
+    if total_inputs == 1:
+        source_node = image_node if has_background else composite_nodes[0]
+        tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
+        if source_node.outputs.get("Alpha"):
+            tree.links.new(source_node.outputs["Alpha"], composite_output.inputs["Alpha"])
+        logger.debug("Connected single source to composite")
+        return composite_output
+
+    alpha_nodes = []
+    for i in range(alpha_count):
+        alpha_node = create_alpha_over_node(
+            tree,
+            (current_x + (i * x_offset), current_y),
+            "Alpha_Over_{}".format(i + 1)
+        )
+        alpha_nodes.append(alpha_node)
+
+        if i > 0:
+            tree.links.new(alpha_nodes[i - 1].outputs[0], alpha_node.inputs[1])
+
+    if has_background:
+        tree.links.new(image_node.outputs["Image"], alpha_nodes[0].inputs[1])
+        for i, rl_node in enumerate(composite_nodes):
+            if i == 0:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
+            else:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i].inputs[2])
+    else:
+        tree.links.new(composite_nodes[0].outputs["Image"], alpha_nodes[0].inputs[1])
+        for i, rl_node in enumerate(composite_nodes[1:], start=1):
+            if i == 1:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
+            else:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i - 1].inputs[2])
+
+    last_alpha = alpha_nodes[-1]
+    tree.links.new(last_alpha.outputs["Image"], composite_output.inputs["Image"])
+
+    logger.debug("Built composite chain with %d inputs at %s", total_inputs, location)
+    return composite_output

@@ -37,14 +37,14 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             tools.clear_nodes(tree)
 
         output_x_position = 600
-
         node_y_offset = tools.get_lowest_node_position(tree) - 50
+        render_layers_nodes = []
 
         for view_layer in view_layers:
             rl_location = (0, node_y_offset)
             fo_location = (output_x_position, node_y_offset)
-
             rl_node = tools.create_render_layers_node(tree, view_layer, rl_location)
+            render_layers_nodes.append(rl_node)
 
             base_path = tools.get_output_base_path(scene, view_layer)
             fo_node = tools.create_file_output_node(
@@ -63,9 +63,16 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
 
             node_y_offset = tools.estimate_lowest_node_position(tree) - 50
 
+        composite_render_nodes = tools.get_composite_render_layers(render_layers_nodes, scene)
+        if composite_render_nodes:
+            composite_location = (output_x_position + 400, 0)
+            tools.build_composite_chain(tree, scene, composite_render_nodes, composite_location)
+
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))
         return {"FINISHED"}
+
+
 
 
 classes = [
