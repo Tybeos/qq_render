@@ -15,12 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 def get_renderable_view_layers(scene):
-    """Returns list of view layers that are enabled for rendering, sorted by order."""
+    """Returns list of view layers that are enabled for rendering."""
     renderable = []
 
-    sorted_layers = sorted(scene.view_layers, key=lambda vl: vl.get("qq_render_order", 0))
-
-    for view_layer in sorted_layers:
+    for view_layer in scene.view_layers:
         if hasattr(view_layer, "use"):
             use_render = view_layer.use
         else:
