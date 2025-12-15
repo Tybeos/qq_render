@@ -30,24 +30,6 @@ def get_renderable_view_layers(scene):
     logger.debug("Found %d renderable view layers", len(renderable))
     return renderable
 
-
-def get_output_base_path(scene, view_layer):
-    """Generates the output path for a view layer."""
-    if not bpy.data.filepath:
-        base_path = "//render/{layer}/{layer}_###.exr".format(layer=view_layer.name)
-        logger.debug("Using default path %s (file not saved)", base_path)
-        return base_path
-
-    blend_path = Path(bpy.data.filepath)
-    file_name = blend_path.stem
-    base_path = "//../render/{file}/{layer}/{layer}_###.exr".format(
-        file=file_name,
-        layer=view_layer.name
-    )
-    logger.debug("Generated output path %s for view layer %s", base_path, view_layer.name)
-    return base_path
-
-
 def setup_compositor(scene):
     """Enables compositor nodes"""
     scene.use_nodes = True

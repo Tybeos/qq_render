@@ -6,10 +6,12 @@ Render Nodes Operators
 """
 
 import logging
+from pathlib import Path
 
 import bpy
 
 from . import tools
+from ..core.relative_path import build_base_path
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,8 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             rl_node = tools.create_render_layers_node(tree, view_layer, rl_location)
             render_layers_nodes.append(rl_node)
 
-            base_path = tools.get_output_base_path(scene, view_layer)
+            project_name = Path(bpy.data.filepath).stem if bpy.data.filepath else "untitled"
+            base_path = build_base_path(project_name, view_layer.name)
             fo_node = tools.create_file_output_node(
                 tree,
                 name="{}_Output".format(view_layer.name),
