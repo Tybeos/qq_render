@@ -35,7 +35,8 @@ NODE_COLORS = {
     "render_layers": (0.30, 0.45, 0.30),
     "denoise": (0.35, 0.35, 0.55),
     "image": (0.30, 0.45, 0.30),
-    "composite": (0.55, 0.33, 0.17)
+    "composite": (0.55, 0.33, 0.17),
+    "viewer": (0.55, 0.33, 0.17)
 }
 
 FILE_OUTPUT_DEFAULTS = {

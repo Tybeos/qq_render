@@ -281,6 +281,16 @@ def create_composite_node(tree, location):
     return node
 
 
+def create_viewer_node(tree, location):
+    """Creates a Viewer output node."""
+    node = tree.nodes.new(type="CompositorNodeViewer")
+    node.location = location
+    node.use_custom_color = True
+    node.color = NODE_COLORS.get("viewer", (0.55, 0.33, 0.17))
+    logger.debug("Created Viewer node at %s", location)
+    return node
+
+
 def get_composite_render_layers(render_layers_nodes, scene):
     """Returns render layer nodes that have use_composite enabled."""
     nodes = []
@@ -303,6 +313,7 @@ def build_composite_chain(tree, scene, composite_nodes, location):
     current_x = location[0]
     current_y = location[1]
     x_offset = 200
+    viewer_y_offset = -150
 
     image_node = create_image_node(tree, scene, (current_x, current_y))
     has_background = image_node is not None
@@ -314,11 +325,13 @@ def build_composite_chain(tree, scene, composite_nodes, location):
 
     composite_x = current_x + (alpha_count * x_offset) + (200 if alpha_count else 0)
     composite_output = create_composite_node(tree, (composite_x, current_y))
+    viewer_node = create_viewer_node(tree, (composite_x, current_y + viewer_y_offset))
 
     if total_inputs == 1:
         source_node = image_node if has_background else composite_nodes[0]
         tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
-        logger.debug("Connected single source to composite")
+        tree.links.new(source_node.outputs["Image"], viewer_node.inputs["Image"])
+        logger.debug("Connected single source to composite and viewer")
         return composite_output
 
     alpha_nodes = []
@@ -350,6 +363,7 @@ def build_composite_chain(tree, scene, composite_nodes, location):
 
     last_alpha = alpha_nodes[-1]
     tree.links.new(last_alpha.outputs["Image"], composite_output.inputs["Image"])
+    tree.links.new(last_alpha.outputs["Image"], viewer_node.inputs["Image"])
 
     logger.debug("Built composite chain with %d inputs at %s", total_inputs, location)
     return composite_output
