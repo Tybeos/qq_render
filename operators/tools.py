@@ -122,10 +122,11 @@ def connect_enabled_passes(tree, render_layers_node, file_output_node):
         if output.name in SKIP_PASSES:
             continue
 
-        file_output_node.file_slots.new(name=output.name)
+        slot_name = "Beauty" if output.name == "Image" else output.name
+        file_output_node.file_slots.new(name=slot_name)
 
         for input_socket in file_output_node.inputs:
-            if input_socket.name == output.name:
+            if input_socket.name == slot_name:
                 tree.links.new(output, input_socket)
                 break
 
@@ -165,11 +166,12 @@ def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_
         if output.name in SKIP_PASSES:
             continue
 
-        file_output_node.file_slots.new(name=output.name)
+        slot_name = "Beauty" if output.name == "Image" else output.name
+        file_output_node.file_slots.new(name=slot_name)
         target_input = None
 
         for input_socket in file_output_node.inputs:
-            if input_socket.name == output.name:
+            if input_socket.name == slot_name:
                 target_input = input_socket
                 break
 
