@@ -53,7 +53,7 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             base_path = build_base_path(project_name, view_layer.name)
             fo_node = tools.create_file_output_node(
                 tree,
-                name="{}_Output".format(view_layer.name),
+                name=view_layer.name,
                 location=fo_location,
                 base_path=base_path
             )
