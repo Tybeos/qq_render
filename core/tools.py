@@ -258,5 +258,6 @@ def create_vector_invert_group(tree, location, name):
     node.name = name
     node.label = name
     node.location = location
+    node.hide = True
     logger.debug("Created Vector Invert group node %s at %s", name, location)
     return node

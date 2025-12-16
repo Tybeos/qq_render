@@ -66,10 +66,8 @@ def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False
     rl_x = render_layers_node.location[0]
     rl_y = render_layers_node.location[1]
 
-    denoise_x_offset = 300
-    denoise_y_offset = 0
-    invert_x_offset = 450 if use_denoise else 300
-    invert_y_offset = 0
+    middle_x_offset = 400
+    middle_y_offset = 0
 
     has_denoise_data = _has_denoising_data(render_layers_node) if use_denoise else False
 
@@ -88,13 +86,13 @@ def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False
         should_invert = make_y_up and output.name in INVERT_Y_PASSES
 
         if should_denoise:
-            denoise_location = (rl_x + denoise_x_offset, rl_y + denoise_y_offset)
+            denoise_location = (rl_x + middle_x_offset, rl_y + middle_y_offset)
             _connect_pass_with_denoise(tree, output, target_input, render_layers_node, denoise_location)
-            denoise_y_offset -= 30
+            middle_y_offset -= 30
         elif should_invert:
-            invert_location = (rl_x + invert_x_offset, rl_y + invert_y_offset)
+            invert_location = (rl_x + middle_x_offset, rl_y + middle_y_offset)
             _connect_pass_with_invert(tree, output, target_input, invert_location)
-            invert_y_offset -= 150
+            middle_y_offset -= 30
         else:
             tree.links.new(output, target_input)
 
@@ -206,7 +204,7 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
         if scene.qq_render_clear_nodes:
             tools.clear_nodes(tree)
 
-        output_x_position = 600
+        output_x_position = 800
         node_y_offset = tools.get_lowest_node_position(tree) - 50
         node_rl_offset = node_y_offset - 400
         render_layers_nodes = []
