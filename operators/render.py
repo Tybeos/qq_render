@@ -66,7 +66,7 @@ def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False
     rl_x = render_layers_node.location[0]
     rl_y = render_layers_node.location[1]
 
-    middle_x_offset = 400
+    middle_x_offset = 450
     middle_y_offset = 0
 
     has_denoise_data = _has_denoising_data(render_layers_node) if use_denoise else False
@@ -155,7 +155,7 @@ def build_composite_chain(tree, scene, composite_nodes, location):
     image_node = tools.create_image_node(tree, scene, (current_x, current_y))
     has_background = image_node is not None
 
-    current_x += 600
+    current_x += 800
 
     total_inputs = len(composite_nodes) + (1 if has_background else 0)
     alpha_count = total_inputs - 1
