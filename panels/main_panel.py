@@ -46,7 +46,7 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         layout.separator()
 
-        split = layout.split(factor=0.5, align=False)
+        split = layout.split(factor=0.333, align=False)
         split.column()
         col = split.column(align=True)
         col.prop(scene, "qq_render_make_y_up")
