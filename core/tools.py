@@ -114,8 +114,13 @@ def create_file_output_node(tree, name, location, base_path):
     return node
 
 
-def connect_enabled_passes(tree, render_layers_node, file_output_node):
+def connect_enabled_passes(tree, render_layers_node, file_output_node, make_y_up=False):
     """Connects all enabled passes from Render Layers to File Output."""
+    invert_y_offset = 0
+    rl_x = render_layers_node.location[0]
+    rl_y = render_layers_node.location[1]
+    invert_x_offset = 300
+
     for output in render_layers_node.outputs:
         if not output.enabled:
             continue
@@ -128,10 +133,20 @@ def connect_enabled_passes(tree, render_layers_node, file_output_node):
 
         for input_socket in file_output_node.inputs:
             if input_socket.name == slot_name:
-                tree.links.new(output, input_socket)
+                if make_y_up and output.name in ["Position", "Normal"]:
+                    invert_group = create_vector_invert_group(
+                        tree,
+                        location=(rl_x + invert_x_offset, rl_y + invert_y_offset),
+                        name="Invert_{}".format(output.name)
+                    )
+                    tree.links.new(output, invert_group.inputs[0])
+                    tree.links.new(invert_group.outputs[0], input_socket)
+                    invert_y_offset -= 150
+                else:
+                    tree.links.new(output, input_socket)
                 break
 
-    logger.debug("Connected passes from %s to %s", render_layers_node.name, file_output_node.name)
+    logger.debug("Connected passes from %s to %s with make_y_up=%s", render_layers_node.name, file_output_node.name, make_y_up)
 
 
 def create_denoise_node(tree, name, location):
@@ -147,11 +162,13 @@ def create_denoise_node(tree, name, location):
     return node
 
 
-def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_x_offset=300):
+def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_x_offset=300, make_y_up=False):
     """Connects passes with denoise nodes for applicable passes."""
     denoise_y_offset = 0
+    invert_y_offset = 0
     rl_x = render_layers_node.location[0]
     rl_y = render_layers_node.location[1]
+    invert_x_offset = 450
 
     has_denoising_data = (
         render_layers_node.outputs.get("Denoising Normal") and
@@ -195,9 +212,19 @@ def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_
 
             denoise_y_offset -= 30
         else:
-            tree.links.new(output, target_input)
+            if make_y_up and output.name in ["Position", "Normal"]:
+                invert_group = create_vector_invert_group(
+                    tree,
+                    location=(rl_x + invert_x_offset, rl_y + invert_y_offset),
+                    name="Invert_{}".format(output.name)
+                )
+                tree.links.new(output, invert_group.inputs[0])
+                tree.links.new(invert_group.outputs[0], target_input)
+                invert_y_offset -= 150
+            else:
+                tree.links.new(output, target_input)
 
-    logger.debug("Connected denoised passes from %s to %s", render_layers_node.name, file_output_node.name)
+    logger.debug("Connected denoised passes from %s to %s with make_y_up=%s", render_layers_node.name, file_output_node.name, make_y_up)
 
 
 def create_image_node(tree, scene, location):

@@ -48,6 +48,10 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         row = layout.row()
         row.alignment = "CENTER"
+        row.prop(scene, "qq_render_make_y_up")
+
+        row = layout.row()
+        row.alignment = "CENTER"
         row.prop(scene, "qq_render_clear_nodes")
 
         row = layout.row()

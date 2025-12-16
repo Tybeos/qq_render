@@ -59,11 +59,12 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             )
 
             use_denoise = view_layer.cycles.denoising_store_passes if scene.render.engine == "CYCLES" else False
+            make_y_up = scene.qq_render_make_y_up
 
             if use_denoise:
-                tools.connect_denoised_passes(tree, rl_node, fo_node)
+                tools.connect_denoised_passes(tree, rl_node, fo_node, make_y_up=make_y_up)
             else:
-                tools.connect_enabled_passes(tree, rl_node, fo_node)
+                tools.connect_enabled_passes(tree, rl_node, fo_node, make_y_up=make_y_up)
 
             node_rl_offset = tools.estimate_lowest_node_position(tree) - 50
 
@@ -126,6 +127,12 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    bpy.types.Scene.qq_render_make_y_up = bpy.props.BoolProperty(
+        name="Make Y Up",
+        description="Invert Position and Normal passes to make Y axis point up",
+        default=False
+    )
+
     bpy.types.Scene.qq_render_clear_nodes = bpy.props.BoolProperty(
         name="Clear Nodes",
         description="Clear all existing compositor nodes before generating",
@@ -137,6 +144,7 @@ def register():
 
 def unregister():
     """Unregisters operator classes."""
+    del bpy.types.Scene.qq_render_make_y_up
     del bpy.types.Scene.qq_render_clear_nodes
 
     for cls in reversed(classes):
