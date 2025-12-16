@@ -127,32 +127,8 @@ def create_denoise_node(tree, name, location):
     return node
 
 
-def create_image_node(tree, scene, location):
-    """Creates an Image node from active camera background images if available."""
-    camera = scene.camera
-
-    if not camera:
-        logger.debug("No active camera in scene")
-        return None
-
-    camera_data = camera.data
-
-    if not camera_data.background_images:
-        logger.debug("Camera %s has no background images", camera.name)
-        return None
-
-    visible_bg_images = [bg for bg in camera_data.background_images if bg.show_background_image]
-
-    if not visible_bg_images:
-        logger.debug("Camera %s has no visible background images", camera.name)
-        return None
-
-    bg_image = visible_bg_images[0]
-
-    if bg_image.source != "IMAGE" or not bg_image.image:
-        logger.debug("Background image source is not IMAGE or no image assigned")
-        return None
-
+def create_image_node(tree, bg_image, location):
+    """Creates an Image node from a background image object."""
     node = tree.nodes.new(type="CompositorNodeImage")
     node.image = bg_image.image
     node.location = location
@@ -167,7 +143,7 @@ def create_image_node(tree, scene, location):
     node.use_auto_refresh = bg_user.use_auto_refresh
     node.use_cyclic = bg_user.use_cyclic
 
-    logger.debug("Created Image node from camera background %s at %s", bg_image.image.name, location)
+    logger.debug("Created Image node from background %s at %s", bg_image.image.name, location)
     return node
 
 
@@ -201,19 +177,6 @@ def create_viewer_node(tree, location):
     node.color = NODE_COLORS.get("viewer", (0.55, 0.33, 0.17))
     logger.debug("Created Viewer node at %s", location)
     return node
-
-
-def get_composite_render_layers(render_layers_nodes, scene):
-    """Returns render layer nodes that have use_composite enabled."""
-    nodes = []
-
-    for node in render_layers_nodes:
-        view_layer = scene.view_layers.get(node.layer)
-        if view_layer and view_layer.qq_render_use_composite:
-            nodes.append(node)
-
-    logger.debug("Found %d render layer nodes for composite", len(nodes))
-    return nodes
 
 
 def create_vector_invert_group(tree, location, name):

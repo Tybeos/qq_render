@@ -61,6 +61,49 @@ def _find_target_input(file_output_node, slot_name):
     return None
 
 
+def _get_composite_render_layers(render_layers_nodes, scene):
+    """Returns render layer nodes that have use_composite enabled."""
+    nodes = []
+
+    for node in render_layers_nodes:
+        view_layer = scene.view_layers.get(node.layer)
+        if view_layer and view_layer.qq_render_use_composite:
+            nodes.append(node)
+
+    logger.debug("Found %d render layer nodes for composite", len(nodes))
+    return nodes
+
+
+def _get_camera_background_image(scene):
+    """Returns the first visible background image from the active camera."""
+    camera = scene.camera
+
+    if not camera:
+        logger.debug("No active camera in scene")
+        return None
+
+    camera_data = camera.data
+
+    if not camera_data.background_images:
+        logger.debug("Camera %s has no background images", camera.name)
+        return None
+
+    visible_bg_images = [bg for bg in camera_data.background_images if bg.show_background_image]
+
+    if not visible_bg_images:
+        logger.debug("Camera %s has no visible background images", camera.name)
+        return None
+
+    bg_image = visible_bg_images[0]
+
+    if bg_image.source != "IMAGE" or not bg_image.image:
+        logger.debug("Background image source is not IMAGE or no image assigned")
+        return None
+
+    logger.debug("Found background image %s from camera %s", bg_image.image.name, camera.name)
+    return bg_image
+
+
 def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False, make_y_up=False):
     """Connects all enabled passes from Render Layers to File Output."""
     rl_x = render_layers_node.location[0]
@@ -152,7 +195,8 @@ def build_composite_chain(tree, scene, composite_nodes, location):
     x_offset = 200
     viewer_y_offset = -150
 
-    image_node = tools.create_image_node(tree, scene, (current_x, current_y))
+    bg_image = _get_camera_background_image(scene)
+    image_node = tools.create_image_node(tree, bg_image, (current_x, current_y)) if bg_image else None
     has_background = image_node is not None
 
     current_x += 800
@@ -231,7 +275,7 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
 
             node_rl_offset = tools.estimate_lowest_node_position(tree) - 50
 
-        composite_render_nodes = tools.get_composite_render_layers(render_layers_nodes, scene)
+        composite_render_nodes = _get_composite_render_layers(render_layers_nodes, scene)
         if composite_render_nodes:
             composite_location = (0, node_y_offset)
             build_composite_chain(tree, scene, composite_render_nodes, composite_location)
