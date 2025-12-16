@@ -12,8 +12,176 @@ import bpy
 
 from ..core import tools
 from ..core.relative_path import build_base_path
+from ..core.constants import SKIP_PASSES, DENOISE_PASSES
 
 logger = logging.getLogger(__name__)
+
+
+def _has_denoising_data(render_layers_node):
+    """Checks if render layers node has denoising data outputs enabled."""
+    denoising_normal = render_layers_node.outputs.get("Denoising Normal")
+    denoising_albedo = render_layers_node.outputs.get("Denoising Albedo")
+    return (
+        denoising_normal and denoising_normal.enabled and
+        denoising_albedo and denoising_albedo.enabled
+    )
+
+
+def _connect_pass_with_denoise(tree, output, target_input, render_layers_node, denoise_location):
+    """Connects a pass through a denoise node."""
+    denoise_node = tools.create_denoise_node(
+        tree,
+        name="Denoise_{}".format(output.name),
+        location=denoise_location
+    )
+    tree.links.new(output, denoise_node.inputs[0])
+    tree.links.new(render_layers_node.outputs["Denoising Normal"], denoise_node.inputs[1])
+    tree.links.new(render_layers_node.outputs["Denoising Albedo"], denoise_node.inputs[2])
+    tree.links.new(denoise_node.outputs[0], target_input)
+    logger.debug("Connected pass %s through denoise node", output.name)
+
+
+def _connect_pass_with_invert(tree, output, target_input, invert_location):
+    """Connects a pass through a vector invert group for Y-up conversion."""
+    invert_group = tools.create_vector_invert_group(
+        tree,
+        location=invert_location,
+        name="Invert_{}".format(output.name)
+    )
+    tree.links.new(output, invert_group.inputs[0])
+    tree.links.new(invert_group.outputs[0], target_input)
+    logger.debug("Connected pass %s through invert group", output.name)
+
+
+def _find_target_input(file_output_node, slot_name):
+    """Finds the input socket matching the slot name."""
+    for input_socket in file_output_node.inputs:
+        if input_socket.name == slot_name:
+            return input_socket
+    return None
+
+
+def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False, make_y_up=False):
+    """Connects all enabled passes from Render Layers to File Output."""
+    rl_x = render_layers_node.location[0]
+    rl_y = render_layers_node.location[1]
+
+    denoise_x_offset = 300
+    denoise_y_offset = 0
+    invert_x_offset = 450 if use_denoise else 300
+    invert_y_offset = 0
+
+    has_denoise_data = _has_denoising_data(render_layers_node) if use_denoise else False
+
+    for output in render_layers_node.outputs:
+        if not output.enabled or output.name in SKIP_PASSES:
+            continue
+
+        slot_name = "Beauty" if output.name == "Image" else output.name
+        file_output_node.file_slots.new(name=slot_name)
+        target_input = _find_target_input(file_output_node, slot_name)
+
+        if not target_input:
+            continue
+
+        should_denoise = use_denoise and has_denoise_data and output.name in DENOISE_PASSES
+        should_invert = make_y_up and output.name in ["Position", "Normal"]
+
+        if should_denoise:
+            denoise_location = (rl_x + denoise_x_offset, rl_y + denoise_y_offset)
+            _connect_pass_with_denoise(tree, output, target_input, render_layers_node, denoise_location)
+            denoise_y_offset -= 30
+        elif should_invert:
+            invert_location = (rl_x + invert_x_offset, rl_y + invert_y_offset)
+            _connect_pass_with_invert(tree, output, target_input, invert_location)
+            invert_y_offset -= 150
+        else:
+            tree.links.new(output, target_input)
+
+    logger.debug("Connected passes from %s to %s with use_denoise=%s make_y_up=%s",
+                 render_layers_node.name, file_output_node.name, use_denoise, make_y_up)
+
+
+def _create_alpha_chain(tree, count, start_location, x_offset):
+    """Creates a chain of Alpha Over nodes and returns them as a list."""
+    alpha_nodes = []
+    current_x, current_y = start_location
+
+    for i in range(count):
+        alpha_node = tools.create_alpha_over_node(
+            tree,
+            (current_x + (i * x_offset), current_y),
+            "Alpha_Over_{}".format(i + 1)
+        )
+        alpha_nodes.append(alpha_node)
+
+        if i > 0:
+            tree.links.new(alpha_nodes[i - 1].outputs[0], alpha_node.inputs[1])
+
+    logger.debug("Created alpha chain with %d nodes", count)
+    return alpha_nodes
+
+
+def _connect_alpha_inputs(tree, alpha_nodes, composite_nodes, image_node):
+    """Connects render layer nodes and optional image node to alpha chain."""
+    has_background = image_node is not None
+
+    if has_background:
+        tree.links.new(image_node.outputs["Image"], alpha_nodes[0].inputs[1])
+        for i, rl_node in enumerate(composite_nodes):
+            if i == 0:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
+            else:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i].inputs[2])
+    else:
+        tree.links.new(composite_nodes[0].outputs["Image"], alpha_nodes[0].inputs[1])
+        for i, rl_node in enumerate(composite_nodes[1:], start=1):
+            if i == 1:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
+            else:
+                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i - 1].inputs[2])
+
+    logger.debug("Connected alpha inputs with background=%s", has_background)
+
+
+def build_composite_chain(tree, scene, composite_nodes, location):
+    """Builds composite chain from render layer nodes with optional background image."""
+    if not composite_nodes:
+        logger.debug("No composite nodes provided")
+        return None
+
+    current_x, current_y = location
+    x_offset = 200
+    viewer_y_offset = -150
+
+    image_node = tools.create_image_node(tree, scene, (current_x, current_y))
+    has_background = image_node is not None
+
+    current_x += 600
+
+    total_inputs = len(composite_nodes) + (1 if has_background else 0)
+    alpha_count = total_inputs - 1
+
+    composite_x = current_x + (alpha_count * x_offset) + (200 if alpha_count else 0)
+    composite_output = tools.create_composite_node(tree, (composite_x, current_y))
+    viewer_node = tools.create_viewer_node(tree, (composite_x, current_y + viewer_y_offset))
+
+    if total_inputs == 1:
+        source_node = image_node if has_background else composite_nodes[0]
+        tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
+        tree.links.new(source_node.outputs["Image"], viewer_node.inputs["Image"])
+        logger.debug("Connected single source to composite and viewer")
+        return composite_output
+
+    alpha_nodes = _create_alpha_chain(tree, alpha_count, (current_x, current_y), x_offset)
+    _connect_alpha_inputs(tree, alpha_nodes, composite_nodes, image_node)
+
+    last_alpha = alpha_nodes[-1]
+    tree.links.new(last_alpha.outputs["Image"], composite_output.inputs["Image"])
+    tree.links.new(last_alpha.outputs["Image"], viewer_node.inputs["Image"])
+
+    logger.debug("Built composite chain with %d inputs at %s", total_inputs, location)
+    return composite_output
 
 
 class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
@@ -61,17 +229,14 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             use_denoise = view_layer.cycles.denoising_store_passes if scene.render.engine == "CYCLES" else False
             make_y_up = scene.qq_render_make_y_up
 
-            if use_denoise:
-                tools.connect_denoised_passes(tree, rl_node, fo_node, make_y_up=make_y_up)
-            else:
-                tools.connect_enabled_passes(tree, rl_node, fo_node, make_y_up=make_y_up)
+            connect_passes(tree, rl_node, fo_node, use_denoise=use_denoise, make_y_up=make_y_up)
 
             node_rl_offset = tools.estimate_lowest_node_position(tree) - 50
 
         composite_render_nodes = tools.get_composite_render_layers(render_layers_nodes, scene)
         if composite_render_nodes:
             composite_location = (0, node_y_offset)
-            tools.build_composite_chain(tree, scene, composite_render_nodes, composite_location)
+            build_composite_chain(tree, scene, composite_render_nodes, composite_location)
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))

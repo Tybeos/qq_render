@@ -9,7 +9,7 @@ from pathlib import Path
 
 import bpy
 
-from .constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES, SKIP_PASSES
+from .constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS
 
 logger = logging.getLogger(__name__)
 
@@ -114,41 +114,6 @@ def create_file_output_node(tree, name, location, base_path):
     return node
 
 
-def connect_enabled_passes(tree, render_layers_node, file_output_node, make_y_up=False):
-    """Connects all enabled passes from Render Layers to File Output."""
-    invert_y_offset = 0
-    rl_x = render_layers_node.location[0]
-    rl_y = render_layers_node.location[1]
-    invert_x_offset = 300
-
-    for output in render_layers_node.outputs:
-        if not output.enabled:
-            continue
-
-        if output.name in SKIP_PASSES:
-            continue
-
-        slot_name = "Beauty" if output.name == "Image" else output.name
-        file_output_node.file_slots.new(name=slot_name)
-
-        for input_socket in file_output_node.inputs:
-            if input_socket.name == slot_name:
-                if make_y_up and output.name in ["Position", "Normal"]:
-                    invert_group = create_vector_invert_group(
-                        tree,
-                        location=(rl_x + invert_x_offset, rl_y + invert_y_offset),
-                        name="Invert_{}".format(output.name)
-                    )
-                    tree.links.new(output, invert_group.inputs[0])
-                    tree.links.new(invert_group.outputs[0], input_socket)
-                    invert_y_offset -= 150
-                else:
-                    tree.links.new(output, input_socket)
-                break
-
-    logger.debug("Connected passes from %s to %s with make_y_up=%s", render_layers_node.name, file_output_node.name, make_y_up)
-
-
 def create_denoise_node(tree, name, location):
     """Creates a Denoise node."""
     node = tree.nodes.new(type="CompositorNodeDenoise")
@@ -160,71 +125,6 @@ def create_denoise_node(tree, name, location):
     node.color = NODE_COLORS["denoise"]
     logger.debug("Created Denoise node %s at %s", name, location)
     return node
-
-
-def connect_denoised_passes(tree, render_layers_node, file_output_node, denoise_x_offset=300, make_y_up=False):
-    """Connects passes with denoise nodes for applicable passes."""
-    denoise_y_offset = 0
-    invert_y_offset = 0
-    rl_x = render_layers_node.location[0]
-    rl_y = render_layers_node.location[1]
-    invert_x_offset = 450
-
-    has_denoising_data = (
-        render_layers_node.outputs.get("Denoising Normal") and
-        render_layers_node.outputs.get("Denoising Normal").enabled and
-        render_layers_node.outputs.get("Denoising Albedo") and
-        render_layers_node.outputs.get("Denoising Albedo").enabled
-    )
-
-    for output in render_layers_node.outputs:
-        if not output.enabled:
-            continue
-
-        if output.name in SKIP_PASSES:
-            continue
-
-        slot_name = "Beauty" if output.name == "Image" else output.name
-        file_output_node.file_slots.new(name=slot_name)
-        target_input = None
-
-        for input_socket in file_output_node.inputs:
-            if input_socket.name == slot_name:
-                target_input = input_socket
-                break
-
-        if not target_input:
-            continue
-
-        should_denoise = output.name in DENOISE_PASSES and has_denoising_data
-
-        if should_denoise:
-            denoise_node = create_denoise_node(
-                tree,
-                name="Denoise_{}".format(output.name),
-                location=(rl_x + denoise_x_offset, rl_y + denoise_y_offset)
-            )
-
-            tree.links.new(output, denoise_node.inputs[0])
-            tree.links.new(render_layers_node.outputs["Denoising Normal"], denoise_node.inputs[1])
-            tree.links.new(render_layers_node.outputs["Denoising Albedo"], denoise_node.inputs[2])
-            tree.links.new(denoise_node.outputs[0], target_input)
-
-            denoise_y_offset -= 30
-        else:
-            if make_y_up and output.name in ["Position", "Normal"]:
-                invert_group = create_vector_invert_group(
-                    tree,
-                    location=(rl_x + invert_x_offset, rl_y + invert_y_offset),
-                    name="Invert_{}".format(output.name)
-                )
-                tree.links.new(output, invert_group.inputs[0])
-                tree.links.new(invert_group.outputs[0], target_input)
-                invert_y_offset -= 150
-            else:
-                tree.links.new(output, target_input)
-
-    logger.debug("Connected denoised passes from %s to %s with make_y_up=%s", render_layers_node.name, file_output_node.name, make_y_up)
 
 
 def create_image_node(tree, scene, location):
@@ -314,71 +214,6 @@ def get_composite_render_layers(render_layers_nodes, scene):
 
     logger.debug("Found %d render layer nodes for composite", len(nodes))
     return nodes
-
-
-def build_composite_chain(tree, scene, composite_nodes, location):
-    """Builds composite chain from render layer nodes with optional background image."""
-    if not composite_nodes:
-        logger.debug("No composite nodes provided")
-        return None
-
-    current_x = location[0]
-    current_y = location[1]
-    x_offset = 200
-    viewer_y_offset = -150
-
-    image_node = create_image_node(tree, scene, (current_x, current_y))
-    has_background = image_node is not None
-
-    current_x += 600
-
-    total_inputs = len(composite_nodes) + (1 if has_background else 0)
-    alpha_count = total_inputs - 1
-
-    composite_x = current_x + (alpha_count * x_offset) + (200 if alpha_count else 0)
-    composite_output = create_composite_node(tree, (composite_x, current_y))
-    viewer_node = create_viewer_node(tree, (composite_x, current_y + viewer_y_offset))
-
-    if total_inputs == 1:
-        source_node = image_node if has_background else composite_nodes[0]
-        tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
-        tree.links.new(source_node.outputs["Image"], viewer_node.inputs["Image"])
-        logger.debug("Connected single source to composite and viewer")
-        return composite_output
-
-    alpha_nodes = []
-    for i in range(alpha_count):
-        alpha_node = create_alpha_over_node(
-            tree,
-            (current_x + (i * x_offset), current_y),
-            "Alpha_Over_{}".format(i + 1)
-        )
-        alpha_nodes.append(alpha_node)
-
-        if i > 0:
-            tree.links.new(alpha_nodes[i - 1].outputs[0], alpha_node.inputs[1])
-
-    if has_background:
-        tree.links.new(image_node.outputs["Image"], alpha_nodes[0].inputs[1])
-        for i, rl_node in enumerate(composite_nodes):
-            if i == 0:
-                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
-            else:
-                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i].inputs[2])
-    else:
-        tree.links.new(composite_nodes[0].outputs["Image"], alpha_nodes[0].inputs[1])
-        for i, rl_node in enumerate(composite_nodes[1:], start=1):
-            if i == 1:
-                tree.links.new(rl_node.outputs["Image"], alpha_nodes[0].inputs[2])
-            else:
-                tree.links.new(rl_node.outputs["Image"], alpha_nodes[i - 1].inputs[2])
-
-    last_alpha = alpha_nodes[-1]
-    tree.links.new(last_alpha.outputs["Image"], composite_output.inputs["Image"])
-    tree.links.new(last_alpha.outputs["Image"], viewer_node.inputs["Image"])
-
-    logger.debug("Built composite chain with %d inputs at %s", total_inputs, location)
-    return composite_output
 
 
 def create_vector_invert_group(tree, location, name):
