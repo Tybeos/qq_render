@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bpy
 
-from . import tools
+from ..core import tools
 from ..core.relative_path import build_base_path
 
 logger = logging.getLogger(__name__)

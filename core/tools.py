@@ -1,5 +1,5 @@
 """
-Operators Tools
+Core Tools
     Description:
         Utility functions for compositor node creation and manipulation.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import bpy
 
-from ..core.constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES, SKIP_PASSES
+from .constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS, DENOISE_PASSES, SKIP_PASSES
 
 logger = logging.getLogger(__name__)
 
