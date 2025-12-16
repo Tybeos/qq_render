@@ -6,14 +6,14 @@ Operators Module
 
 import logging
 
-from . import render_nodes
+from . import render
 from . import vl_list
 
 logger = logging.getLogger(__name__)
 
 modules = [
     vl_list,
-    render_nodes,
+    render,
 ]
 
 
