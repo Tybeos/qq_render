@@ -10,13 +10,6 @@ import bpy
 
 logger = logging.getLogger(__name__)
 
-view_layer_clipboard = {
-    "passes": {},
-    "cycles": {},
-    "source": None,
-}
-
-
 def get_active_view_layer_index(self):
     """Returns the index of the active view layer in the scene."""
     try:
@@ -110,26 +103,9 @@ class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
 
     def execute(self, context):
         """Executes the copy view layer settings operator."""
-        view_layer = context.window.view_layer
-
-        view_layer_clipboard["passes"] = {}
-
-        for attr in dir(view_layer):
-            if attr.startswith("use_pass_"):
-                view_layer_clipboard["passes"][attr] = getattr(view_layer, attr)
-
-        if hasattr(view_layer, "cycles"):
-            view_layer_clipboard["cycles"] = {
-                "denoising_store_passes": view_layer.cycles.denoising_store_passes,
-                "use_denoising": view_layer.cycles.use_denoising,
-            }
-        else:
-            view_layer_clipboard["cycles"] = {}
-
-        view_layer_clipboard["source"] = view_layer.name
-
-        self.report({"INFO"}, "Copied settings from: {}".format(view_layer.name))
-        logger.debug("Copied view layer settings from %s", view_layer.name)
+        bpy.ops.scene.view_layer_copy_settings()
+        self.report({"INFO"}, "Copied settings from: {}".format(context.window.view_layer.name))
+        logger.debug("Copied view layer settings from %s", context.window.view_layer.name)
         return {"FINISHED"}
 
 
@@ -143,23 +119,13 @@ class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         """Checks if clipboard has data."""
-        return bool(view_layer_clipboard["passes"])
+        return bpy.ops.scene.view_layer_paste_settings.poll()
 
     def execute(self, context):
         """Executes the paste view layer settings operator."""
-        view_layer = context.window.view_layer
-
-        for attr, value in view_layer_clipboard["passes"].items():
-            if hasattr(view_layer, attr):
-                setattr(view_layer, attr, value)
-
-        if hasattr(view_layer, "cycles") and view_layer_clipboard["cycles"]:
-            for attr, value in view_layer_clipboard["cycles"].items():
-                if hasattr(view_layer.cycles, attr):
-                    setattr(view_layer.cycles, attr, value)
-
-        self.report({"INFO"}, "Pasted settings to: {}".format(view_layer.name))
-        logger.debug("Pasted view layer settings to %s", view_layer.name)
+        bpy.ops.scene.view_layer_paste_settings()
+        self.report({"INFO"}, "Pasted settings to: {}".format(context.window.view_layer.name))
+        logger.debug("Pasted view layer settings to %s", context.window.view_layer.name)
         return {"FINISHED"}
 
 
