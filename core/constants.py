@@ -30,6 +30,11 @@ DENOISE_PASSES = {
     "Shadow Catcher"
 }
 
+INVERT_Y_PASSES = {
+    "Position",
+    "Normal"
+}
+
 NODE_COLORS = {
     "file_output": (0.55, 0.33, 0.17),
     "render_layers": (0.30, 0.45, 0.30),

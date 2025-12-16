@@ -12,7 +12,7 @@ import bpy
 
 from ..core import tools
 from ..core.relative_path import build_base_path
-from ..core.constants import SKIP_PASSES, DENOISE_PASSES
+from ..core.constants import SKIP_PASSES, DENOISE_PASSES, INVERT_Y_PASSES
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False
             continue
 
         should_denoise = use_denoise and has_denoise_data and output.name in DENOISE_PASSES
-        should_invert = make_y_up and output.name in ["Position", "Normal"]
+        should_invert = make_y_up and output.name in INVERT_Y_PASSES
 
         if should_denoise:
             denoise_location = (rl_x + denoise_x_offset, rl_y + denoise_y_offset)
