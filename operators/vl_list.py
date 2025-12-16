@@ -40,20 +40,23 @@ def set_active_view_layer_index(self, value):
 
 
 class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
-    """Adds a new view layer."""
+    """Adds a new view layer with settings copied from the active layer."""
 
     bl_idname = "qq_render.vl_list_add"
     bl_label = "Add View Layer"
-    bl_description = "Add a new view layer"
+    bl_description = "Add a new view layer with settings copied from the active layer"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         """Executes the add view layer operator."""
         scene = context.scene
-        new_layer = scene.view_layers.new(name="ViewLayer")
-        context.window.view_layer = new_layer
-        self.report({"INFO"}, "Added view layer: {}".format(new_layer.name))
-        logger.debug("Added new view layer %s", new_layer.name)
+        source_layer = context.window.view_layer
+
+        bpy.ops.scene.view_layer_add(type="COPY")
+
+        new_layer = context.window.view_layer
+        self.report({"INFO"}, "Added view layer: {} (copied from {})".format(new_layer.name, source_layer.name))
+        logger.debug("Added new view layer %s with settings copied from %s", new_layer.name, source_layer.name)
         return {"FINISHED"}
 
 
