@@ -30,6 +30,7 @@ def get_renderable_view_layers(scene):
     logger.debug("Found %d renderable view layers", len(renderable))
     return renderable
 
+
 def setup_compositor(scene):
     """Enables compositor nodes"""
     scene.use_nodes = True
