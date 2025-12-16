@@ -94,6 +94,14 @@ class QQ_RENDER_OT_vl_list_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
+view_layer_clipboard = {
+    "passes": {},
+    "cycles": {},
+    "eevee": {},
+    "source": None,
+}
+
+
 class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
     """Copies the active view layer settings to clipboard."""
 
@@ -103,9 +111,42 @@ class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
 
     def execute(self, context):
         """Executes the copy view layer settings operator."""
-        bpy.ops.scene.view_layer_copy_settings()
-        self.report({"INFO"}, "Copied settings from: {}".format(context.window.view_layer.name))
-        logger.debug("Copied view layer settings from %s", context.window.view_layer.name)
+        view_layer = context.window.view_layer
+
+        view_layer_clipboard["passes"] = {}
+        for attr in dir(view_layer):
+            if attr.startswith("use_pass_") or attr in ["use_solid", "use_ao", "material_override", "samples", "pass_alpha_threshold"]:
+                try:
+                    view_layer_clipboard["passes"][attr] = getattr(view_layer, attr)
+                except (AttributeError, TypeError):
+                    pass
+
+        if hasattr(view_layer, "cycles"):
+            view_layer_clipboard["cycles"] = {}
+            for attr in dir(view_layer.cycles):
+                if not attr.startswith("_") and attr != "rna_type":
+                    try:
+                        value = getattr(view_layer.cycles, attr)
+                        if not callable(value):
+                            view_layer_clipboard["cycles"][attr] = value
+                    except (AttributeError, TypeError):
+                        pass
+
+        if hasattr(view_layer, "eevee"):
+            view_layer_clipboard["eevee"] = {}
+            for attr in dir(view_layer.eevee):
+                if not attr.startswith("_") and attr != "rna_type":
+                    try:
+                        value = getattr(view_layer.eevee, attr)
+                        if not callable(value):
+                            view_layer_clipboard["eevee"][attr] = value
+                    except (AttributeError, TypeError):
+                        pass
+
+        view_layer_clipboard["source"] = view_layer.name
+
+        self.report({"INFO"}, "Copied settings from: {}".format(view_layer.name))
+        logger.debug("Copied view layer settings from %s", view_layer.name)
         return {"FINISHED"}
 
 
@@ -119,13 +160,37 @@ class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         """Checks if clipboard has data."""
-        return bpy.ops.scene.view_layer_paste_settings.poll()
+        return view_layer_clipboard["source"] is not None
 
     def execute(self, context):
         """Executes the paste view layer settings operator."""
-        bpy.ops.scene.view_layer_paste_settings()
-        self.report({"INFO"}, "Pasted settings to: {}".format(context.window.view_layer.name))
-        logger.debug("Pasted view layer settings to %s", context.window.view_layer.name)
+        view_layer = context.window.view_layer
+
+        for attr, value in view_layer_clipboard["passes"].items():
+            if hasattr(view_layer, attr):
+                try:
+                    setattr(view_layer, attr, value)
+                except (AttributeError, TypeError):
+                    pass
+
+        if hasattr(view_layer, "cycles") and view_layer_clipboard["cycles"]:
+            for attr, value in view_layer_clipboard["cycles"].items():
+                if hasattr(view_layer.cycles, attr):
+                    try:
+                        setattr(view_layer.cycles, attr, value)
+                    except (AttributeError, TypeError):
+                        pass
+
+        if hasattr(view_layer, "eevee") and view_layer_clipboard["eevee"]:
+            for attr, value in view_layer_clipboard["eevee"].items():
+                if hasattr(view_layer.eevee, attr):
+                    try:
+                        setattr(view_layer.eevee, attr, value)
+                    except (AttributeError, TypeError):
+                        pass
+
+        self.report({"INFO"}, "Pasted settings to: {}".format(view_layer.name))
+        logger.debug("Pasted view layer settings to %s", view_layer.name)
         return {"FINISHED"}
 
 
