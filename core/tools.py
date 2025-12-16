@@ -352,3 +352,49 @@ def build_composite_chain(tree, scene, composite_nodes, location):
 
     logger.debug("Built composite chain with %d inputs at %s", total_inputs, location)
     return composite_output
+
+
+def create_vector_invert_group(tree, location, name):
+    """Creates a Vector Invert node group instance in the shader tree."""
+    group = bpy.data.node_groups.new(name=name, type="ShaderNodeTree")
+
+    group_input = group.nodes.new(type="NodeGroupInput")
+    group_input.location = (-400, 0)
+    group_input.name = "Group Input"
+
+    group_output = group.nodes.new(type="NodeGroupOutput")
+    group_output.location = (400, 0)
+    group_output.name = "Group Output"
+
+    separate_xyz = group.nodes.new(type="ShaderNodeSeparateXYZ")
+    separate_xyz.location = (-200, 0)
+    separate_xyz.name = "Separate XYZ"
+
+    multiply = group.nodes.new(type="ShaderNodeMath")
+    multiply.location = (0, 100)
+    multiply.operation = "MULTIPLY"
+    multiply.inputs[1].default_value = -1.0
+    multiply.name = "Multiply"
+    multiply.use_clamp = False
+
+    combine_xyz = group.nodes.new(type="ShaderNodeCombineXYZ")
+    combine_xyz.location = (200, 0)
+    combine_xyz.name = "Combine XYZ"
+
+    group.interface.new_socket(name="Vector", in_out="INPUT", socket_type="NodeSocketVector")
+    group.interface.new_socket(name="Vector", in_out="OUTPUT", socket_type="NodeSocketVector")
+
+    group.links.new(group_input.outputs[0], separate_xyz.inputs[0])
+    group.links.new(separate_xyz.outputs[0], multiply.inputs[0])
+    group.links.new(separate_xyz.outputs[1], combine_xyz.inputs[1])
+    group.links.new(separate_xyz.outputs[2], combine_xyz.inputs[2])
+    group.links.new(multiply.outputs[0], combine_xyz.inputs[0])
+    group.links.new(combine_xyz.outputs[0], group_output.inputs[0])
+
+    node = tree.nodes.new(type="ShaderNodeGroup")
+    node.node_tree = group
+    node.name = name
+    node.label = name
+    node.location = location
+    logger.debug("Created Vector Invert group node %s at %s", name, location)
+    return node
