@@ -77,8 +77,47 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class QQ_RENDER_OT_update_output_paths(bpy.types.Operator):
+    """Updates base paths for all File Output nodes in the compositor."""
+
+    bl_idname = "qq_render.update_output_paths"
+    bl_label = "Update Output Paths"
+    bl_description = "Update base_path for all File Output nodes based on their names"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        """Executes the output path update operator."""
+        scene = context.scene
+
+        if not scene.use_nodes or not scene.node_tree:
+            self.report({"WARNING"}, "Compositor nodes not enabled")
+            return {"CANCELLED"}
+
+        tree = scene.node_tree
+        updated_count = 0
+
+        project_name = Path(bpy.data.filepath).stem if bpy.data.filepath else "untitled"
+
+        for node in tree.nodes:
+            if node.type == "OUTPUT_FILE":
+                layer_name = node.name
+                new_base_path = build_base_path(project_name, layer_name)
+                node.base_path = new_base_path
+                updated_count += 1
+                logger.debug("Updated File Output node %s with base_path %s", layer_name, new_base_path)
+
+        if updated_count == 0:
+            self.report({"WARNING"}, "No File Output nodes found")
+            return {"CANCELLED"}
+
+        self.report({"INFO"}, "Updated {} File Output nodes".format(updated_count))
+        logger.debug("Updated base_path for %d File Output nodes", updated_count)
+        return {"FINISHED"}
+
+
 classes = [
     QQ_RENDER_OT_generate_nodes,
+    QQ_RENDER_OT_update_output_paths,
 ]
 
 

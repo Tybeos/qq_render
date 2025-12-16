@@ -54,6 +54,10 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         row.scale_y = 1.5
         row.operator("qq_render.generate_nodes", icon="NODE")
 
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("qq_render.update_output_paths", icon="FILE_REFRESH")
+
         logger.debug("Drew main panel with %d view layers", len(scene.view_layers))
 
 
