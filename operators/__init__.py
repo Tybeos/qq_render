@@ -8,12 +8,14 @@ import logging
 
 from . import render
 from . import vl_list
+from . import export
 
 logger = logging.getLogger(__name__)
 
 modules = [
     vl_list,
     render,
+    export,
 ]
 
 

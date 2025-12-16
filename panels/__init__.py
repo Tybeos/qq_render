@@ -8,12 +8,14 @@ import logging
 
 from . import vl_list
 from . import main_panel
+from . import export
 
 logger = logging.getLogger(__name__)
 
 modules = [
     vl_list,
     main_panel,
+    export,
 ]
 
 
