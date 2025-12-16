@@ -7,12 +7,12 @@ Operators Module
 import logging
 
 from . import render_nodes
-from . import view_layer_ops
+from . import vl_list
 
 logger = logging.getLogger(__name__)
 
 modules = [
-    view_layer_ops,
+    vl_list,
     render_nodes,
 ]
 

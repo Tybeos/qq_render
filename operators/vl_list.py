@@ -1,5 +1,5 @@
 """
-View Layer Operators
+View Layer List Operators
     Description:
         Operators for managing view layers in the UIList.
 """
@@ -39,10 +39,10 @@ def set_active_view_layer_index(self, value):
         pass
 
 
-class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
+class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
     """Adds a new view layer."""
 
-    bl_idname = "qq_render.view_layer_add"
+    bl_idname = "qq_render.vl_list_add"
     bl_label = "Add View Layer"
     bl_description = "Add a new view layer"
     bl_options = {"REGISTER", "UNDO"}
@@ -57,10 +57,10 @@ class QQ_RENDER_OT_view_layer_add(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
+class QQ_RENDER_OT_vl_list_remove(bpy.types.Operator):
     """Removes the selected view layer."""
 
-    bl_idname = "qq_render.view_layer_remove"
+    bl_idname = "qq_render.vl_list_remove"
     bl_label = "Remove View Layer"
     bl_description = "Remove the selected view layer"
     bl_options = {"REGISTER", "UNDO"}
@@ -98,10 +98,10 @@ class QQ_RENDER_OT_view_layer_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class QQ_RENDER_OT_view_layer_copy(bpy.types.Operator):
+class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
     """Copies the active view layer settings to clipboard."""
 
-    bl_idname = "qq_render.view_layer_copy"
+    bl_idname = "qq_render.vl_list_copy"
     bl_label = "Copy View Layer Settings"
     bl_description = "Copy the active view layer settings"
 
@@ -130,10 +130,10 @@ class QQ_RENDER_OT_view_layer_copy(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class QQ_RENDER_OT_view_layer_paste(bpy.types.Operator):
+class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
     """Pastes the clipboard settings to the active view layer."""
 
-    bl_idname = "qq_render.view_layer_paste"
+    bl_idname = "qq_render.vl_list_paste"
     bl_label = "Paste View Layer Settings"
     bl_description = "Paste the clipboard settings to the active view layer"
 
@@ -161,10 +161,10 @@ class QQ_RENDER_OT_view_layer_paste(bpy.types.Operator):
 
 
 classes = [
-    QQ_RENDER_OT_view_layer_add,
-    QQ_RENDER_OT_view_layer_remove,
-    QQ_RENDER_OT_view_layer_copy,
-    QQ_RENDER_OT_view_layer_paste,
+    QQ_RENDER_OT_vl_list_add,
+    QQ_RENDER_OT_vl_list_remove,
+    QQ_RENDER_OT_vl_list_copy,
+    QQ_RENDER_OT_vl_list_paste,
 ]
 
 

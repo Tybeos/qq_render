@@ -11,7 +11,7 @@ import bpy
 logger = logging.getLogger(__name__)
 
 
-class QQ_RENDER_UL_view_layers(bpy.types.UIList):
+class QQ_RENDER_UL_vl_list(bpy.types.UIList):
     """UIList for displaying view layers with render toggle."""
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
@@ -27,7 +27,7 @@ class QQ_RENDER_UL_view_layers(bpy.types.UIList):
 
 
 classes = [
-    QQ_RENDER_UL_view_layers,
+    QQ_RENDER_UL_vl_list,
 ]
 
 

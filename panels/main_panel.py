@@ -28,7 +28,7 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         row = layout.row()
         row.template_list(
-            "QQ_RENDER_UL_view_layers",
+            "QQ_RENDER_UL_vl_list",
             "",
             scene,
             "view_layers",
@@ -38,11 +38,11 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         )
 
         col = row.column(align=True)
-        col.operator("qq_render.view_layer_add", icon="ADD", text="")
-        col.operator("qq_render.view_layer_remove", icon="REMOVE", text="")
+        col.operator("qq_render.vl_list_add", icon="ADD", text="")
+        col.operator("qq_render.vl_list_remove", icon="REMOVE", text="")
         col.separator()
-        col.operator("qq_render.view_layer_copy", icon="COPYDOWN", text="")
-        col.operator("qq_render.view_layer_paste", icon="PASTEDOWN", text="")
+        col.operator("qq_render.vl_list_copy", icon="COPYDOWN", text="")
+        col.operator("qq_render.vl_list_paste", icon="PASTEDOWN", text="")
 
         layout.separator()
 
