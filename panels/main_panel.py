@@ -46,8 +46,9 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         layout.separator()
 
-        col = layout.column(align=True)
-        col.alignment = "CENTER"
+        split = layout.split(factor=0.5, align=False)
+        split.column()
+        col = split.column(align=True)
         col.prop(scene, "qq_render_make_y_up")
         col.prop(scene, "qq_render_clear_nodes")
 
