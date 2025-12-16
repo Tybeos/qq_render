@@ -382,8 +382,8 @@ def build_composite_chain(tree, scene, composite_nodes, location):
 
 
 def create_vector_invert_group(tree, location, name):
-    """Creates a Vector Invert node group instance in the shader tree."""
-    group = bpy.data.node_groups.new(name=name, type="ShaderNodeTree")
+    """Creates a Vector Invert node group instance in the compositor tree."""
+    group = bpy.data.node_groups.new(name=name, type="CompositorNodeTree")
 
     group_input = group.nodes.new(type="NodeGroupInput")
     group_input.location = (-400, 0)
@@ -393,18 +393,18 @@ def create_vector_invert_group(tree, location, name):
     group_output.location = (400, 0)
     group_output.name = "Group Output"
 
-    separate_xyz = group.nodes.new(type="ShaderNodeSeparateXYZ")
+    separate_xyz = group.nodes.new(type="CompositorNodeSeparateXYZ")
     separate_xyz.location = (-200, 0)
     separate_xyz.name = "Separate XYZ"
 
-    multiply = group.nodes.new(type="ShaderNodeMath")
+    multiply = group.nodes.new(type="CompositorNodeMath")
     multiply.location = (0, 100)
     multiply.operation = "MULTIPLY"
     multiply.inputs[1].default_value = -1.0
     multiply.name = "Multiply"
     multiply.use_clamp = False
 
-    combine_xyz = group.nodes.new(type="ShaderNodeCombineXYZ")
+    combine_xyz = group.nodes.new(type="CompositorNodeCombineXYZ")
     combine_xyz.location = (200, 0)
     combine_xyz.name = "Combine XYZ"
 
@@ -418,7 +418,7 @@ def create_vector_invert_group(tree, location, name):
     group.links.new(multiply.outputs[0], combine_xyz.inputs[0])
     group.links.new(combine_xyz.outputs[0], group_output.inputs[0])
 
-    node = tree.nodes.new(type="ShaderNodeGroup")
+    node = tree.nodes.new(type="CompositorNodeGroup")
     node.node_tree = group
     node.name = name
     node.label = name
