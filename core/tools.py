@@ -217,7 +217,7 @@ def get_composite_render_layers(render_layers_nodes, scene):
 
 
 def create_vector_invert_group(tree, location, name):
-    """Creates a Vector Invert node group instance in the compositor tree."""
+    """Creates a Z-up to Y-up conversion node group with Y inversion."""
     group = bpy.data.node_groups.new(name=name, type="CompositorNodeTree")
 
     group_input = group.nodes.new(type="NodeGroupInput")
@@ -247,10 +247,10 @@ def create_vector_invert_group(tree, location, name):
     group.interface.new_socket(name="Vector", in_out="OUTPUT", socket_type="NodeSocketVector")
 
     group.links.new(group_input.outputs[0], separate_xyz.inputs[0])
-    group.links.new(separate_xyz.outputs[0], multiply.inputs[0])
-    group.links.new(separate_xyz.outputs[1], combine_xyz.inputs[1])
-    group.links.new(separate_xyz.outputs[2], combine_xyz.inputs[2])
-    group.links.new(multiply.outputs[0], combine_xyz.inputs[0])
+    group.links.new(separate_xyz.outputs[0], combine_xyz.inputs[0])
+    group.links.new(separate_xyz.outputs[1], multiply.inputs[0])
+    group.links.new(multiply.outputs[0], combine_xyz.inputs[2])
+    group.links.new(separate_xyz.outputs[2], combine_xyz.inputs[1])
     group.links.new(combine_xyz.outputs[0], group_output.inputs[0])
 
     node = tree.nodes.new(type="CompositorNodeGroup")
