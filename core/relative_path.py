@@ -34,7 +34,9 @@ def build_base_path(project_name, layer_name):
             layer=layer_name
         )
 
-    base_path = "//../render/render_master/{result}/{result}.####.exr".format(result=result)
+    base_path = "//../render/render_master/{project_name}/{result}/{result}.####.exr".format(
+        project_name=project_name,
+        result=result)
     logger.debug("Built base path %s from project %s layer %s", base_path, project_name, layer_name)
     return base_path
 
@@ -56,17 +58,9 @@ def build_camera_export_path(project_name):
     else:
         filename = "{project}.camera.abc".format(project=project_name)
 
-    export_path = "//../render/render_master/{filename}".format(filename=filename)
+    export_path = "//../render/render_master/{project_name}/{filename}".format(
+        project_name=project_name,
+        filename=filename)
     logger.debug("Built camera export path %s from project %s", export_path, project_name)
     return export_path
 
-
-if __name__ == "__main__":
-    print(build_base_path("rendering.v01", "letadlo"))
-    print(build_base_path("rendering.v01.test", "letadlo"))
-    print(build_base_path("project.v123.final", "background"))
-    print(build_base_path("noversion", "layer1"))
-    print(build_camera_export_path("rendering.v01"))
-    print(build_camera_export_path("rendering.v01.test"))
-    print(build_camera_export_path("project.v123.final"))
-    print(build_camera_export_path("noversion"))
