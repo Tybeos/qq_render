@@ -23,10 +23,35 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
     bl_description = "Export active camera with animation to Alembic (.abc) file"
     bl_options = {"REGISTER", "UNDO"}
 
+    overwrite: bpy.props.BoolProperty(
+        name="Overwrite",
+        description="Overwrite existing file",
+        default=False
+    )
+
     @classmethod
     def poll(cls, context):
         """Checks if there is an active camera in the scene."""
         return context.scene.camera is not None
+
+    def invoke(self, context, event):
+        """Checks for existing file and shows confirmation dialog if needed."""
+        if not bpy.data.filepath:
+            self.report({"WARNING"}, "Project is not saved. Please save the project first.")
+            logger.warning("Camera export cancelled - project is not saved")
+            return {"CANCELLED"}
+
+        blend_path = Path(bpy.data.filepath)
+        project_name = blend_path.stem
+        relative_path = build_camera_export_path(project_name)
+        export_path = bpy.path.abspath(relative_path)
+        export_path_obj = Path(export_path)
+
+        if export_path_obj.exists():
+            return context.window_manager.invoke_confirm(self, event)
+
+        logger.debug("Invoke camera export for %s", export_path_obj)
+        return self.execute(context)
 
     def execute(self, context):
         """Executes the camera export operator."""

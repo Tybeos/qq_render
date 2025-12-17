@@ -27,7 +27,7 @@ class QQ_RENDER_PT_export_panel(bpy.types.Panel):
         scene = context.scene
 
         row = layout.row()
-        row.scale_y = 1.2
+        row.scale_y = 1.5
         row.operator("qq_render.export_camera", icon="OUTLINER_OB_CAMERA")
 
         logger.debug("Drew export panel")
