@@ -10,21 +10,9 @@ from pathlib import Path
 
 import bpy
 
+from ..core.relative_path import build_camera_export_path
+
 logger = logging.getLogger(__name__)
-
-
-def get_export_path(context, filename):
-    """Returns export path based on blend file location or temp directory."""
-    if bpy.data.filepath:
-        blend_dir = Path(bpy.data.filepath).parent
-        export_dir = blend_dir / "export"
-    else:
-        export_dir = Path(bpy.app.tempdir) / "export"
-
-    export_dir.mkdir(parents=True, exist_ok=True)
-    export_path = export_dir / filename
-    logger.debug("Generated export path %s", export_path)
-    return export_path
 
 
 class QQ_RENDER_OT_export_camera(bpy.types.Operator):
@@ -49,9 +37,17 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
             self.report({"ERROR"}, "No active camera in scene")
             return {"CANCELLED"}
 
-        project_name = Path(bpy.data.filepath).stem if bpy.data.filepath else "untitled"
-        filename = "{}_camera.abc".format(project_name)
-        export_path = get_export_path(context, filename)
+        if not bpy.data.filepath:
+            self.report({"WARNING"}, "Project is not saved. Please save the project first.")
+            logger.warning("Camera export cancelled - project is not saved")
+            return {"CANCELLED"}
+
+        blend_path = Path(bpy.data.filepath)
+        project_name = blend_path.stem
+        relative_path = build_camera_export_path(project_name)
+        export_path = bpy.path.abspath(relative_path)
+        export_path_obj = Path(export_path)
+        export_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
         original_selection = context.selected_objects.copy()
         original_active = context.view_layer.objects.active
@@ -62,7 +58,7 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
 
         try:
             bpy.ops.wm.alembic_export(
-                filepath=str(export_path),
+                filepath=str(export_path_obj),
                 start=scene.frame_start,
                 end=scene.frame_end,
                 selected=True,
@@ -81,8 +77,8 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
                 global_scale=1.0,
                 triangulate=False,
             )
-            self.report({"INFO"}, "Camera exported to {}".format(export_path))
-            logger.debug("Exported camera %s to %s", camera.name, export_path)
+            self.report({"INFO"}, "Camera exported to {}".format(export_path_obj))
+            logger.debug("Exported camera %s to %s", camera.name, export_path_obj)
 
         except Exception as e:
             self.report({"ERROR"}, "Export failed: {}".format(str(e)))

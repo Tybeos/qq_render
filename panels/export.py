@@ -1,7 +1,7 @@
 """
 Export Panel
     Description:
-        Collapsible UI panel for export operations under the Update Path button.
+        Standalone UI panel for export operations in the View Layer properties.
 """
 
 import logging
@@ -12,15 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class QQ_RENDER_PT_export_panel(bpy.types.Panel):
-    """Collapsible export sub-panel nested inside main qq Render panel."""
+    """Standalone export panel in View Layer properties."""
 
-    bl_label = "Export"
+    bl_label = "qq Export"
     bl_idname = "QQ_RENDER_PT_export_panel"
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "view_layer"
-    bl_parent_id = "QQ_RENDER_PT_main_panel"
-    bl_options = {"DEFAULT_CLOSED"}
+    bl_order = 1
 
     def draw(self, context):
         """Draws the export panel content."""
