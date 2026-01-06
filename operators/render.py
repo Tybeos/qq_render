@@ -62,16 +62,19 @@ def _find_target_input(file_output_node, slot_name):
 
 
 def _get_composite_render_layers(render_layers_nodes, scene):
-    """Returns render layer nodes that have use_composite enabled."""
+    """Returns render layer nodes that have use_composite enabled, sorted by sort order."""
     nodes = []
 
     for node in render_layers_nodes:
         view_layer = scene.view_layers.get(node.layer)
         if view_layer and view_layer.qq_render_use_composite:
-            nodes.append(node)
+            nodes.append((node, view_layer.qq_render_sort_order))
 
-    logger.debug("Found %d render layer nodes for composite", len(nodes))
-    return nodes
+    nodes.sort(key=lambda x: x[1])
+    sorted_nodes = [node for node, order in nodes]
+
+    logger.debug("Found %d render layer nodes for composite sorted by order", len(sorted_nodes))
+    return sorted_nodes
 
 
 def _get_camera_background_image(scene):

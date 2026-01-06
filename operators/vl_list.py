@@ -32,6 +32,13 @@ def set_active_view_layer_index(self, value):
         pass
 
 
+def get_max_sort_order(scene):
+    """Returns the highest sort order value among all view layers."""
+    if not scene.view_layers:
+        return -1
+    return max(vl.qq_render_sort_order for vl in scene.view_layers)
+
+
 class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
     """Adds a new view layer with settings copied from the active layer."""
 
@@ -45,11 +52,15 @@ class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
         scene = context.scene
         source_layer = context.window.view_layer
 
+        next_order = get_max_sort_order(scene) + 1
+
         bpy.ops.scene.view_layer_add(type="COPY")
 
         new_layer = context.window.view_layer
+        new_layer.qq_render_sort_order = next_order
+
         self.report({"INFO"}, "Added view layer: {} (copied from {})".format(new_layer.name, source_layer.name))
-        logger.debug("Added new view layer %s with settings copied from %s", new_layer.name, source_layer.name)
+        logger.debug("Added new view layer %s with sort_order %d copied from %s", new_layer.name, next_order, source_layer.name)
         return {"FINISHED"}
 
 
@@ -100,6 +111,102 @@ view_layer_clipboard = {
     "eevee": {},
     "source": None,
 }
+
+
+def get_sorted_view_layers(scene):
+    """Returns view layers sorted by qq_render_sort_order."""
+    return sorted(scene.view_layers, key=lambda vl: vl.qq_render_sort_order)
+
+
+def get_view_layer_sort_position(scene, view_layer):
+    """Returns the position of a view layer in sorted order."""
+    sorted_layers = get_sorted_view_layers(scene)
+    for idx, vl in enumerate(sorted_layers):
+        if vl == view_layer:
+            return idx
+    return -1
+
+
+def swap_sort_orders(layer_a, layer_b):
+    """Swaps sort order values between two view layers."""
+    order_a = layer_a.qq_render_sort_order
+    order_b = layer_b.qq_render_sort_order
+    layer_a.qq_render_sort_order = order_b
+    layer_b.qq_render_sort_order = order_a
+
+
+class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
+    """Moves the view layer up in the sort order."""
+
+    bl_idname = "qq_render.vl_move_up"
+    bl_label = "Move View Layer Up"
+    bl_description = "Move this view layer up in the composite order"
+    bl_options = {"REGISTER", "UNDO"}
+
+    layer_name: bpy.props.StringProperty(name="Layer Name")
+
+    @classmethod
+    def poll(cls, context):
+        """Checks if the operator can be executed."""
+        return len(context.scene.view_layers) > 1
+
+    def execute(self, context):
+        """Executes the move up operator."""
+        scene = context.scene
+        view_layer = scene.view_layers.get(self.layer_name)
+
+        if not view_layer:
+            self.report({"WARNING"}, "View layer not found")
+            return {"CANCELLED"}
+
+        sorted_layers = get_sorted_view_layers(scene)
+        current_pos = get_view_layer_sort_position(scene, view_layer)
+
+        if current_pos <= 0:
+            return {"CANCELLED"}
+
+        prev_layer = sorted_layers[current_pos - 1]
+        swap_sort_orders(view_layer, prev_layer)
+
+        logger.debug("Moved view layer %s up from position %d", self.layer_name, current_pos)
+        return {"FINISHED"}
+
+
+class QQ_RENDER_OT_vl_move_down(bpy.types.Operator):
+    """Moves the view layer down in the sort order."""
+
+    bl_idname = "qq_render.vl_move_down"
+    bl_label = "Move View Layer Down"
+    bl_description = "Move this view layer down in the composite order"
+    bl_options = {"REGISTER", "UNDO"}
+
+    layer_name: bpy.props.StringProperty(name="Layer Name")
+
+    @classmethod
+    def poll(cls, context):
+        """Checks if the operator can be executed."""
+        return len(context.scene.view_layers) > 1
+
+    def execute(self, context):
+        """Executes the move down operator."""
+        scene = context.scene
+        view_layer = scene.view_layers.get(self.layer_name)
+
+        if not view_layer:
+            self.report({"WARNING"}, "View layer not found")
+            return {"CANCELLED"}
+
+        sorted_layers = get_sorted_view_layers(scene)
+        current_pos = get_view_layer_sort_position(scene, view_layer)
+
+        if current_pos < 0 or current_pos >= len(sorted_layers) - 1:
+            return {"CANCELLED"}
+
+        next_layer = sorted_layers[current_pos + 1]
+        swap_sort_orders(view_layer, next_layer)
+
+        logger.debug("Moved view layer %s down from position %d", self.layer_name, current_pos)
+        return {"FINISHED"}
 
 
 class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
@@ -197,6 +304,8 @@ class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
 classes = [
     QQ_RENDER_OT_vl_list_add,
     QQ_RENDER_OT_vl_list_remove,
+    QQ_RENDER_OT_vl_move_up,
+    QQ_RENDER_OT_vl_move_down,
     QQ_RENDER_OT_vl_list_copy,
     QQ_RENDER_OT_vl_list_paste,
 ]
