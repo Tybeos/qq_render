@@ -25,12 +25,22 @@ def get_view_layer_sort_position(scene, view_layer):
     return -1
 
 
+def ensure_unique_sort_orders(scene):
+    """Ensures all view layers have unique sort order values."""
+    orders = [vl.qq_render_sort_order for vl in scene.view_layers]
+    if len(orders) != len(set(orders)):
+        for idx, vl in enumerate(scene.view_layers):
+            vl.qq_render_sort_order = idx
+
+
 class QQ_RENDER_UL_vl_list(bpy.types.UIList):
     """UIList for displaying view layers with render toggle."""
 
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
         """Draws a single view layer item in the list."""
         scene = context.scene
+        ensure_unique_sort_orders(scene)
+
         sorted_layers = get_sorted_view_layers(scene)
         current_pos = get_view_layer_sort_position(scene, item)
         is_first = current_pos == 0
@@ -38,15 +48,19 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
 
         row = layout.row(align=True)
 
-        up_row = row.row(align=True)
-        up_row.enabled = not is_first
-        move_up = up_row.operator("qq_render.vl_move_up", text="", icon="SORT_DESC", emboss=False)
+        up_sub = row.row(align=True)
+        up_sub.enabled = not is_first
+        up_sub.scale_x = 0.8
+        move_up = up_sub.operator("qq_render.vl_move_up", text="", icon="TRIA_UP")
         move_up.layer_name = item.name
 
-        down_row = row.row(align=True)
-        down_row.enabled = not is_last
-        move_down = down_row.operator("qq_render.vl_move_down", text="", icon="SORT_ASC", emboss=False)
+        down_sub = row.row(align=True)
+        down_sub.enabled = not is_last
+        down_sub.scale_x = 0.8
+        move_down = down_sub.operator("qq_render.vl_move_down", text="", icon="TRIA_DOWN")
         move_down.layer_name = item.name
+
+        row.separator()
 
         row.prop(item, "name", text="", emboss=False, translate=False)
 
