@@ -25,22 +25,18 @@ def get_view_layer_sort_position(scene, view_layer):
     return -1
 
 
-def ensure_unique_sort_orders(scene):
-    """Ensures all view layers have unique sort order values."""
+def has_duplicate_sort_orders(scene):
+    """Checks if any view layers have duplicate sort order values."""
     orders = [vl.qq_render_sort_order for vl in scene.view_layers]
-    if len(orders) != len(set(orders)):
-        for idx, vl in enumerate(scene.view_layers):
-            vl.qq_render_sort_order = idx
+    return len(orders) != len(set(orders))
 
 
 class QQ_RENDER_UL_vl_list(bpy.types.UIList):
     """UIList for displaying view layers with render toggle."""
 
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         """Draws a single view layer item in the list."""
         scene = context.scene
-        ensure_unique_sort_orders(scene)
-
         sorted_layers = get_sorted_view_layers(scene)
         current_pos = get_view_layer_sort_position(scene, item)
         is_first = current_pos == 0
@@ -48,16 +44,17 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
 
         row = layout.row(align=True)
 
-        up_sub = row.row(align=True)
+        arrows = row.row(align=True)
+        arrows.alignment = "LEFT"
+
+        up_sub = arrows.row(align=True)
         up_sub.enabled = not is_first
-        up_sub.scale_x = 0.8
-        move_up = up_sub.operator("qq_render.vl_move_up", text="", icon="TRIA_UP")
+        move_up = up_sub.operator("qq_render.vl_move_up", text="", icon="SORT_DESC")
         move_up.layer_name = item.name
 
-        down_sub = row.row(align=True)
+        down_sub = arrows.row(align=True)
         down_sub.enabled = not is_last
-        down_sub.scale_x = 0.8
-        move_down = down_sub.operator("qq_render.vl_move_down", text="", icon="TRIA_DOWN")
+        move_down = down_sub.operator("qq_render.vl_move_down", text="", icon="SORT_ASC")
         move_down.layer_name = item.name
 
         row.separator()
@@ -69,6 +66,20 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
 
         row.prop(item, "qq_render_use_composite", text="", icon="NODE_COMPOSITING")
         row.prop(item, "use", text="", icon="RESTRICT_RENDER_OFF" if item.use else "RESTRICT_RENDER_ON")
+
+    def filter_items(self, context, data, propname):
+        """Sorts view layers by qq_render_sort_order."""
+        view_layers = getattr(data, propname)
+
+        flt_flags = [self.bitflag_filter_item] * len(view_layers)
+
+        sorted_indices = sorted(range(len(view_layers)), key=lambda i: view_layers[i].qq_render_sort_order)
+
+        flt_neworder = [0] * len(view_layers)
+        for new_pos, old_idx in enumerate(sorted_indices):
+            flt_neworder[old_idx] = new_pos
+
+        return flt_flags, flt_neworder
 
 
 classes = [

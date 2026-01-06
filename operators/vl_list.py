@@ -113,6 +113,15 @@ view_layer_clipboard = {
 }
 
 
+def ensure_unique_sort_orders(scene):
+    """Ensures all view layers have unique sort order values."""
+    orders = [vl.qq_render_sort_order for vl in scene.view_layers]
+    if len(orders) != len(set(orders)):
+        for idx, vl in enumerate(scene.view_layers):
+            vl.qq_render_sort_order = idx
+        logger.debug("Initialized sort orders for %d view layers", len(scene.view_layers))
+
+
 def get_sorted_view_layers(scene):
     """Returns view layers sorted by qq_render_sort_order."""
     return sorted(scene.view_layers, key=lambda vl: vl.qq_render_sort_order)
@@ -153,6 +162,8 @@ class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
     def execute(self, context):
         """Executes the move up operator."""
         scene = context.scene
+        ensure_unique_sort_orders(scene)
+
         view_layer = scene.view_layers.get(self.layer_name)
 
         if not view_layer:
@@ -167,6 +178,9 @@ class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
 
         prev_layer = sorted_layers[current_pos - 1]
         swap_sort_orders(view_layer, prev_layer)
+
+        for area in context.screen.areas:
+            area.tag_redraw()
 
         logger.debug("Moved view layer %s up from position %d", self.layer_name, current_pos)
         return {"FINISHED"}
@@ -190,6 +204,8 @@ class QQ_RENDER_OT_vl_move_down(bpy.types.Operator):
     def execute(self, context):
         """Executes the move down operator."""
         scene = context.scene
+        ensure_unique_sort_orders(scene)
+
         view_layer = scene.view_layers.get(self.layer_name)
 
         if not view_layer:
@@ -204,6 +220,9 @@ class QQ_RENDER_OT_vl_move_down(bpy.types.Operator):
 
         next_layer = sorted_layers[current_pos + 1]
         swap_sort_orders(view_layer, next_layer)
+
+        for area in context.screen.areas:
+            area.tag_redraw()
 
         logger.debug("Moved view layer %s down from position %d", self.layer_name, current_pos)
         return {"FINISHED"}
