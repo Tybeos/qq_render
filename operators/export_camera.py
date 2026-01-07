@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Callable
 
 import bpy
 
-from ..core.relative_path import build_camera_export_path
+from ..core.path_utils import build_camera_export_path
 
 if TYPE_CHECKING:
     from bpy.types import Context, Event, UILayout

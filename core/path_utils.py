@@ -1,13 +1,26 @@
 """
-Relative Path Utilities
+Path Utilities
     Description:
-        Functions for generating relative output paths for render outputs.
+        Functions for path operations including existence checks for files
+        and image sequences, and generating relative output paths.
 """
+
+from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from ..vendor.fileseq.src import FileSequence
+from ..vendor.fileseq.src.exceptions import FileSeqException
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
+
+_SEQUENCE_PATTERN = re.compile(r"[#@]+|%\d*d|\$F\d*")
 
 version_regex = re.compile(r"(v\d{1,3})", re.IGNORECASE)
 version_number_regex = re.compile(r"v(\d+)$", re.IGNORECASE)
@@ -63,4 +76,22 @@ def build_camera_export_path(project_name):
         filename=filename)
     logger.debug("Built camera export path %s from project %s", export_path, project_name)
     return export_path
+
+
+def path_exists(path: Path) -> bool:
+    """Checks if a file or image sequence exists on disk."""
+    path_str = str(path)
+
+    if _SEQUENCE_PATTERN.search(path_str):
+        try:
+            FileSequence.findSequenceOnDisk(path_str)
+            logger.debug("Sequence exists at %s", path)
+            return True
+        except FileSeqException:
+            logger.debug("Sequence not found at %s", path)
+            return False
+
+    exists = path.exists()
+    logger.debug("Path %s exists: %s", path, exists)
+    return exists
 

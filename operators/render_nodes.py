@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import bpy
 
 from ..core import tools
-from ..core.relative_path import build_base_path
+from ..core.path_utils import build_base_path
 from ..core.constants import SKIP_PASSES, DENOISE_PASSES, INVERT_Y_PASSES
 
 if TYPE_CHECKING:
