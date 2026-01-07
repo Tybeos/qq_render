@@ -5,8 +5,11 @@ Render Nodes Operators
         based on view layers and their enabled passes.
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import bpy
 
@@ -14,10 +17,22 @@ from ..core import tools
 from ..core.relative_path import build_base_path
 from ..core.constants import SKIP_PASSES, DENOISE_PASSES, INVERT_Y_PASSES
 
+if TYPE_CHECKING:
+    from bpy.types import (
+        BackgroundImage,
+        CompositorNode,
+        CompositorNodeOutputFile,
+        CompositorNodeRLayers,
+        Context,
+        NodeSocket,
+        NodeTree,
+        Scene,
+    )
+
 logger = logging.getLogger(__name__)
 
 
-def _has_denoising_data(render_layers_node):
+def _has_denoising_data(render_layers_node: CompositorNodeRLayers) -> bool:
     """Checks if render layers node has denoising data outputs enabled."""
     denoising_normal = render_layers_node.outputs.get("Denoising Normal")
     denoising_albedo = render_layers_node.outputs.get("Denoising Albedo")
@@ -27,7 +42,12 @@ def _has_denoising_data(render_layers_node):
     )
 
 
-def _connect_pass_with_denoise(tree, output, target_input, render_layers_node, denoise_location):
+def _connect_pass_with_denoise(
+    tree: NodeTree,
+    output: NodeSocket,
+    target_input: NodeSocket,
+    render_layers_node: CompositorNodeRLayers,
+    denoise_location: tuple[float, float]) -> None:
     """Connects a pass through a denoise node."""
     denoise_node = tools.create_denoise_node(
         tree,
@@ -41,7 +61,11 @@ def _connect_pass_with_denoise(tree, output, target_input, render_layers_node, d
     logger.debug("Connected pass %s through denoise node", output.name)
 
 
-def _connect_pass_with_invert(tree, output, target_input, invert_location):
+def _connect_pass_with_invert(
+    tree: NodeTree,
+    output: NodeSocket,
+    target_input: NodeSocket,
+    invert_location: tuple[float, float]) -> None:
     """Connects a pass through a vector invert group for Y-up conversion."""
     invert_group = tools.create_vector_invert_group(
         tree,
@@ -53,7 +77,7 @@ def _connect_pass_with_invert(tree, output, target_input, invert_location):
     logger.debug("Connected pass %s through invert group", output.name)
 
 
-def _find_target_input(file_output_node, slot_name):
+def _find_target_input(file_output_node: CompositorNodeOutputFile, slot_name: str) -> NodeSocket | None:
     """Finds the input socket matching the slot name."""
     for input_socket in file_output_node.inputs:
         if input_socket.name == slot_name:
@@ -61,7 +85,9 @@ def _find_target_input(file_output_node, slot_name):
     return None
 
 
-def _get_composite_render_layers(render_layers_nodes, scene):
+def _get_composite_render_layers(
+    render_layers_nodes: list[CompositorNodeRLayers],
+    scene: Scene) -> list[CompositorNodeRLayers]:
     """Returns render layer nodes that have use_composite enabled, sorted by sort order."""
     nodes = []
 
@@ -77,7 +103,7 @@ def _get_composite_render_layers(render_layers_nodes, scene):
     return sorted_nodes
 
 
-def _get_camera_background_image(scene):
+def _get_camera_background_image(scene: Scene) -> BackgroundImage | None:
     """Returns the first visible background image from the active camera."""
     camera = scene.camera
 
@@ -107,7 +133,12 @@ def _get_camera_background_image(scene):
     return bg_image
 
 
-def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False, make_y_up=False):
+def _connect_passes(
+    tree: NodeTree,
+    render_layers_node: CompositorNodeRLayers,
+    file_output_node: CompositorNodeOutputFile,
+    use_denoise: bool = False,
+    make_y_up: bool = False) -> None:
     """Connects all enabled passes from Render Layers to File Output."""
     rl_x = render_layers_node.location[0]
     rl_y = render_layers_node.location[1]
@@ -146,7 +177,11 @@ def connect_passes(tree, render_layers_node, file_output_node, use_denoise=False
                  render_layers_node.name, file_output_node.name, use_denoise, make_y_up)
 
 
-def _create_alpha_chain(tree, count, start_location, x_offset):
+def _create_alpha_chain(
+    tree: NodeTree,
+    count: int,
+    start_location: tuple[float, float],
+    x_offset: int) -> list[CompositorNode]:
     """Creates a chain of Alpha Over nodes and returns them as a list."""
     alpha_nodes = []
     current_x, current_y = start_location
@@ -166,7 +201,11 @@ def _create_alpha_chain(tree, count, start_location, x_offset):
     return alpha_nodes
 
 
-def _connect_alpha_inputs(tree, alpha_nodes, composite_nodes, image_node):
+def _connect_alpha_inputs(
+    tree: NodeTree,
+    alpha_nodes: list[CompositorNode],
+    composite_nodes: list[CompositorNodeRLayers],
+    image_node: CompositorNode | None) -> None:
     """Connects render layer nodes and optional image node to alpha chain."""
     has_background = image_node is not None
 
@@ -188,7 +227,11 @@ def _connect_alpha_inputs(tree, alpha_nodes, composite_nodes, image_node):
     logger.debug("Connected alpha inputs with background=%s", has_background)
 
 
-def build_composite_chain(tree, scene, composite_nodes, location):
+def _build_composite_chain(
+    tree: NodeTree,
+    scene: Scene,
+    composite_nodes: list[CompositorNodeRLayers],
+    location: tuple[float, float]) -> CompositorNode | None:
     """Builds composite chain from render layer nodes with optional background image."""
     if not composite_nodes:
         logger.debug("No composite nodes provided")
@@ -237,7 +280,7 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
     bl_description = "Generate File Output nodes for each view layer"
     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the node generation operator."""
         scene = context.scene
         view_layers = tools.get_renderable_view_layers(scene)
@@ -274,14 +317,14 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
             use_denoise = view_layer.cycles.denoising_store_passes if scene.render.engine == "CYCLES" else False
             make_y_up = scene.qq_render_make_y_up
 
-            connect_passes(tree, rl_node, fo_node, use_denoise=use_denoise, make_y_up=make_y_up)
+            _connect_passes(tree, rl_node, fo_node, use_denoise=use_denoise, make_y_up=make_y_up)
 
             node_rl_offset = tools.estimate_lowest_node_position(tree) - 50
 
         composite_render_nodes = _get_composite_render_layers(render_layers_nodes, scene)
         if composite_render_nodes:
             composite_location = (0, node_y_offset)
-            build_composite_chain(tree, scene, composite_render_nodes, composite_location)
+            _build_composite_chain(tree, scene, composite_render_nodes, composite_location)
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))
@@ -296,7 +339,7 @@ class QQ_RENDER_OT_update_output_paths(bpy.types.Operator):
     bl_description = "Update base_path for all File Output nodes based on their names"
     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the output path update operator."""
         scene = context.scene
 
@@ -326,15 +369,15 @@ class QQ_RENDER_OT_update_output_paths(bpy.types.Operator):
         return {"FINISHED"}
 
 
-classes = [
+_CLASSES = [
     QQ_RENDER_OT_generate_nodes,
     QQ_RENDER_OT_update_output_paths,
 ]
 
 
-def register():
+def register() -> None:
     """Registers operator classes."""
-    for cls in classes:
+    for cls in _CLASSES:
         bpy.utils.register_class(cls)
 
     bpy.types.Scene.qq_render_make_y_up = bpy.props.BoolProperty(
@@ -349,14 +392,14 @@ def register():
         default=True
     )
 
-    logger.debug("Registered %d operator classes", len(classes))
+    logger.debug("Registered %d operator classes", len(_CLASSES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters operator classes."""
     del bpy.types.Scene.qq_render_make_y_up
     del bpy.types.Scene.qq_render_clear_nodes
 
-    for cls in reversed(classes):
+    for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
     logger.debug("Unregistered operator classes")

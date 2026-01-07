@@ -1,21 +1,26 @@
 """
-Export Operators
+Export Camera Operators
     Description:
-        Operators for exporting scene elements like cameras
-        to external formats such as Alembic.
+        Operators for exporting scene cameras to external formats such as Alembic.
 """
+
+from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING, Callable
 
 import bpy
 
 from ..core.relative_path import build_camera_export_path
 
+if TYPE_CHECKING:
+    from bpy.types import Context, Event, UILayout
+
 logger = logging.getLogger(__name__)
 
 
-def export_camera_to_alembic(context, report_func):
+def _export_camera_to_alembic(context: Context, report_func: Callable) -> bool:
     """Exports active camera to Alembic file."""
     scene = context.scene
     camera = scene.camera
@@ -90,24 +95,23 @@ class QQ_RENDER_OT_export_camera_confirm(bpy.types.Operator):
     bl_description = "Overwrite existing camera export file"
     bl_options = {"INTERNAL"}
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> set[str]:
         """Shows the confirmation dialog centered in Blender window."""
         return context.window_manager.invoke_props_dialog(self, width=400)
 
-    def draw(self, context):
+    def draw(self, context: Context) -> None:
         """Draws the confirmation dialog content."""
-        layout = self.layout
+        layout: UILayout = self.layout
         export_path = context.window_manager.qq_render_export_path
         layout.label(text="Camera export file already exists:")
         layout.label(text=export_path)
         layout.label(text="Do you want to overwrite it?")
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Performs the overwrite export."""
-        success = export_camera_to_alembic(context, self.report)
+        success = _export_camera_to_alembic(context, self.report)
         logger.debug("Overwrite confirmed, success: %s", success)
         return {"FINISHED"} if success else {"CANCELLED"}
-
 
 
 class QQ_RENDER_OT_export_camera(bpy.types.Operator):
@@ -119,11 +123,11 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Checks if there is an active camera in the scene."""
         return context.scene.camera is not None
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event: Event) -> set[str]:
         """Checks for existing file and shows confirmation dialog if needed."""
         if not bpy.data.filepath:
             self.report({"WARNING"}, "Project is not saved. Please save the project first.")
@@ -144,21 +148,21 @@ class QQ_RENDER_OT_export_camera(bpy.types.Operator):
         logger.debug("Invoke camera export for %s", export_path_obj)
         return self.execute(context)
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the camera export operator."""
-        success = export_camera_to_alembic(context, self.report)
+        success = _export_camera_to_alembic(context, self.report)
         return {"FINISHED"} if success else {"CANCELLED"}
 
 
-classes = [
+_CLASSES = [
     QQ_RENDER_OT_export_camera_confirm,
     QQ_RENDER_OT_export_camera,
 ]
 
 
-def register():
+def register() -> None:
     """Registers export operator classes."""
-    for cls in classes:
+    for cls in _CLASSES:
         bpy.utils.register_class(cls)
 
     bpy.types.WindowManager.qq_render_export_path = bpy.props.StringProperty(
@@ -166,12 +170,12 @@ def register():
         description="Temporary storage for export path in confirmation dialog",
         default=""
     )
-    logger.debug("Registered %d export operator classes", len(classes))
+    logger.debug("Registered %d export operator classes", len(_CLASSES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters export operator classes."""
-    for cls in reversed(classes):
+    for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
 
     del bpy.types.WindowManager.qq_render_export_path

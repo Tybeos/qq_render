@@ -4,30 +4,32 @@ Operators Module
         Registers all operator classes for the addon.
 """
 
+from __future__ import annotations
+
 import logging
 
-from . import render
-from . import vl_list
-from . import export
+from . import render_nodes
+from . import vl_list_ops
+from . import export_camera
 
 logger = logging.getLogger(__name__)
 
-modules = [
-    vl_list,
-    render,
-    export,
+_MODULES = [
+    vl_list_ops,
+    render_nodes,
+    export_camera,
 ]
 
 
-def register():
+def register() -> None:
     """Registers all operator modules."""
-    for module in modules:
+    for module in _MODULES:
         module.register()
-    logger.debug("Registered %d operator modules", len(modules))
+    logger.debug("Registered %d operator modules", len(_MODULES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters all operator modules."""
-    for module in reversed(modules):
+    for module in reversed(_MODULES):
         module.unregister()
     logger.debug("Unregistered operator modules")

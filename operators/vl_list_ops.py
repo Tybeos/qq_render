@@ -4,13 +4,34 @@ View Layer List Operators
         Operators for managing view layers in the UIList.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 import bpy
 
+from ..core.tools import (
+    ensure_unique_sort_orders,
+    get_sorted_view_layers,
+    get_view_layer_sort_position,
+    swap_sort_orders,
+)
+
+if TYPE_CHECKING:
+    from bpy.types import Context, Scene
+
 logger = logging.getLogger(__name__)
 
-def get_active_view_layer_index(self):
+_VIEW_LAYER_CLIPBOARD: dict[str, Any] = {
+    "passes": {},
+    "cycles": {},
+    "eevee": {},
+    "source": None,
+}
+
+
+def _get_active_view_layer_index(self: Scene) -> int:
     """Returns the index of the active view layer in the scene."""
     try:
         view_layer = bpy.context.window.view_layer
@@ -22,7 +43,7 @@ def get_active_view_layer_index(self):
     return 0
 
 
-def set_active_view_layer_index(self, value):
+def _set_active_view_layer_index(self: Scene, value: int) -> None:
     """Sets the active view layer by index."""
     try:
         if 0 <= value < len(self.view_layers):
@@ -32,11 +53,13 @@ def set_active_view_layer_index(self, value):
         pass
 
 
-def get_max_sort_order(scene):
+def _get_max_sort_order(scene: Scene) -> int:
     """Returns the highest sort order value among all view layers."""
     if not scene.view_layers:
         return -1
-    return max(vl.qq_render_sort_order for vl in scene.view_layers)
+    max_order = max(vl.qq_render_sort_order for vl in scene.view_layers)
+    logger.debug("Max sort order is %d", max_order)
+    return max_order
 
 
 class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
@@ -47,12 +70,12 @@ class QQ_RENDER_OT_vl_list_add(bpy.types.Operator):
     bl_description = "Add a new view layer with settings copied from the active layer"
     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the add view layer operator."""
         scene = context.scene
         source_layer = context.window.view_layer
 
-        next_order = get_max_sort_order(scene) + 1
+        next_order = _get_max_sort_order(scene) + 1
 
         bpy.ops.scene.view_layer_add(type="COPY")
 
@@ -73,11 +96,11 @@ class QQ_RENDER_OT_vl_list_remove(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Checks if removal is possible (at least 2 view layers)."""
         return len(context.scene.view_layers) > 1
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the remove view layer operator."""
         scene = context.scene
         view_layers = scene.view_layers
@@ -105,45 +128,6 @@ class QQ_RENDER_OT_vl_list_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
-view_layer_clipboard = {
-    "passes": {},
-    "cycles": {},
-    "eevee": {},
-    "source": None,
-}
-
-
-def ensure_unique_sort_orders(scene):
-    """Ensures all view layers have unique sort order values."""
-    orders = [vl.qq_render_sort_order for vl in scene.view_layers]
-    if len(orders) != len(set(orders)):
-        for idx, vl in enumerate(scene.view_layers):
-            vl.qq_render_sort_order = idx
-        logger.debug("Initialized sort orders for %d view layers", len(scene.view_layers))
-
-
-def get_sorted_view_layers(scene):
-    """Returns view layers sorted by qq_render_sort_order."""
-    return sorted(scene.view_layers, key=lambda vl: vl.qq_render_sort_order)
-
-
-def get_view_layer_sort_position(scene, view_layer):
-    """Returns the position of a view layer in sorted order."""
-    sorted_layers = get_sorted_view_layers(scene)
-    for idx, vl in enumerate(sorted_layers):
-        if vl == view_layer:
-            return idx
-    return -1
-
-
-def swap_sort_orders(layer_a, layer_b):
-    """Swaps sort order values between two view layers."""
-    order_a = layer_a.qq_render_sort_order
-    order_b = layer_b.qq_render_sort_order
-    layer_a.qq_render_sort_order = order_b
-    layer_b.qq_render_sort_order = order_a
-
-
 class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
     """Moves the view layer up in the sort order."""
 
@@ -155,11 +139,11 @@ class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
     layer_name: bpy.props.StringProperty(name="Layer Name")
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Checks if the operator can be executed."""
         return len(context.scene.view_layers) > 1
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the move up operator."""
         scene = context.scene
         ensure_unique_sort_orders(scene)
@@ -197,11 +181,11 @@ class QQ_RENDER_OT_vl_move_down(bpy.types.Operator):
     layer_name: bpy.props.StringProperty(name="Layer Name")
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Checks if the operator can be executed."""
         return len(context.scene.view_layers) > 1
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the move down operator."""
         scene = context.scene
         ensure_unique_sort_orders(scene)
@@ -235,41 +219,41 @@ class QQ_RENDER_OT_vl_list_copy(bpy.types.Operator):
     bl_label = "Copy View Layer Settings"
     bl_description = "Copy the active view layer settings"
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the copy view layer settings operator."""
         view_layer = context.window.view_layer
 
-        view_layer_clipboard["passes"] = {}
+        _VIEW_LAYER_CLIPBOARD["passes"] = {}
         for attr in dir(view_layer):
             if attr.startswith("use_pass_") or attr in ["use_solid", "use_ao", "material_override", "samples", "pass_alpha_threshold"]:
                 try:
-                    view_layer_clipboard["passes"][attr] = getattr(view_layer, attr)
+                    _VIEW_LAYER_CLIPBOARD["passes"][attr] = getattr(view_layer, attr)
                 except (AttributeError, TypeError):
                     pass
 
         if hasattr(view_layer, "cycles"):
-            view_layer_clipboard["cycles"] = {}
+            _VIEW_LAYER_CLIPBOARD["cycles"] = {}
             for attr in dir(view_layer.cycles):
                 if not attr.startswith("_") and attr != "rna_type":
                     try:
                         value = getattr(view_layer.cycles, attr)
                         if not callable(value):
-                            view_layer_clipboard["cycles"][attr] = value
+                            _VIEW_LAYER_CLIPBOARD["cycles"][attr] = value
                     except (AttributeError, TypeError):
                         pass
 
         if hasattr(view_layer, "eevee"):
-            view_layer_clipboard["eevee"] = {}
+            _VIEW_LAYER_CLIPBOARD["eevee"] = {}
             for attr in dir(view_layer.eevee):
                 if not attr.startswith("_") and attr != "rna_type":
                     try:
                         value = getattr(view_layer.eevee, attr)
                         if not callable(value):
-                            view_layer_clipboard["eevee"][attr] = value
+                            _VIEW_LAYER_CLIPBOARD["eevee"][attr] = value
                     except (AttributeError, TypeError):
                         pass
 
-        view_layer_clipboard["source"] = view_layer.name
+        _VIEW_LAYER_CLIPBOARD["source"] = view_layer.name
 
         self.report({"INFO"}, "Copied settings from: {}".format(view_layer.name))
         logger.debug("Copied view layer settings from %s", view_layer.name)
@@ -284,31 +268,31 @@ class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
     bl_description = "Paste the clipboard settings to the active view layer"
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context) -> bool:
         """Checks if clipboard has data."""
-        return view_layer_clipboard["source"] is not None
+        return _VIEW_LAYER_CLIPBOARD["source"] is not None
 
-    def execute(self, context):
+    def execute(self, context: Context) -> set[str]:
         """Executes the paste view layer settings operator."""
         view_layer = context.window.view_layer
 
-        for attr, value in view_layer_clipboard["passes"].items():
+        for attr, value in _VIEW_LAYER_CLIPBOARD["passes"].items():
             if hasattr(view_layer, attr):
                 try:
                     setattr(view_layer, attr, value)
                 except (AttributeError, TypeError):
                     pass
 
-        if hasattr(view_layer, "cycles") and view_layer_clipboard["cycles"]:
-            for attr, value in view_layer_clipboard["cycles"].items():
+        if hasattr(view_layer, "cycles") and _VIEW_LAYER_CLIPBOARD["cycles"]:
+            for attr, value in _VIEW_LAYER_CLIPBOARD["cycles"].items():
                 if hasattr(view_layer.cycles, attr):
                     try:
                         setattr(view_layer.cycles, attr, value)
                     except (AttributeError, TypeError):
                         pass
 
-        if hasattr(view_layer, "eevee") and view_layer_clipboard["eevee"]:
-            for attr, value in view_layer_clipboard["eevee"].items():
+        if hasattr(view_layer, "eevee") and _VIEW_LAYER_CLIPBOARD["eevee"]:
+            for attr, value in _VIEW_LAYER_CLIPBOARD["eevee"].items():
                 if hasattr(view_layer.eevee, attr):
                     try:
                         setattr(view_layer.eevee, attr, value)
@@ -320,7 +304,7 @@ class QQ_RENDER_OT_vl_list_paste(bpy.types.Operator):
         return {"FINISHED"}
 
 
-classes = [
+_CLASSES = [
     QQ_RENDER_OT_vl_list_add,
     QQ_RENDER_OT_vl_list_remove,
     QQ_RENDER_OT_vl_move_up,
@@ -330,26 +314,26 @@ classes = [
 ]
 
 
-def register():
+def register() -> None:
     """Registers view layer operator classes and properties."""
-    for cls in classes:
+    for cls in _CLASSES:
         bpy.utils.register_class(cls)
 
     bpy.types.Scene.qq_render_active_view_layer_index = bpy.props.IntProperty(
         name="Active View Layer Index",
         description="Index of the active view layer in the list",
-        get=get_active_view_layer_index,
-        set=set_active_view_layer_index
+        get=_get_active_view_layer_index,
+        set=_set_active_view_layer_index
     )
 
-    logger.debug("Registered %d view layer operator classes", len(classes))
+    logger.debug("Registered %d view layer operator classes", len(_CLASSES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters view layer operator classes and properties."""
     del bpy.types.Scene.qq_render_active_view_layer_index
 
-    for cls in reversed(classes):
+    for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
 
     logger.debug("Unregistered view layer operator classes")

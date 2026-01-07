@@ -1,20 +1,72 @@
 """
 Core Tools
     Description:
-        Utility functions for compositor node creation and manipulation.
+        Utility functions for compositor node creation, manipulation,
+        and view layer management.
 """
 
+from __future__ import annotations
+
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import bpy
 
 from .constants import NODE_COLORS, FILE_OUTPUT_DEFAULTS
 
+if TYPE_CHECKING:
+    from bpy.types import (
+        BackgroundImage,
+        CompositorNode,
+        CompositorNodeOutputFile,
+        CompositorNodeRLayers,
+        Node,
+        NodeSocket,
+        NodeTree,
+        Scene,
+        ViewLayer,
+    )
+
 logger = logging.getLogger(__name__)
 
 
-def get_renderable_view_layers(scene):
+def get_sorted_view_layers(scene: Scene) -> list[ViewLayer]:
+    """Returns view layers sorted by qq_render_sort_order."""
+    sorted_layers = sorted(scene.view_layers, key=lambda vl: vl.qq_render_sort_order)
+    logger.debug("Got %d sorted view layers", len(sorted_layers))
+    return sorted_layers
+
+
+def get_view_layer_sort_position(scene: Scene, view_layer: ViewLayer) -> int:
+    """Returns the position of a view layer in sorted order."""
+    sorted_layers = get_sorted_view_layers(scene)
+    for idx, vl in enumerate(sorted_layers):
+        if vl == view_layer:
+            logger.debug("View layer %s is at position %d", view_layer.name, idx)
+            return idx
+    logger.debug("View layer %s not found in sorted list", view_layer.name)
+    return -1
+
+
+def ensure_unique_sort_orders(scene: Scene) -> None:
+    """Ensures all view layers have unique sort order values."""
+    orders = [vl.qq_render_sort_order for vl in scene.view_layers]
+    if len(orders) != len(set(orders)):
+        for idx, vl in enumerate(scene.view_layers):
+            vl.qq_render_sort_order = idx
+        logger.debug("Initialized sort orders for %d view layers", len(scene.view_layers))
+
+
+def swap_sort_orders(layer_a: ViewLayer, layer_b: ViewLayer) -> None:
+    """Swaps sort order values between two view layers."""
+    order_a = layer_a.qq_render_sort_order
+    order_b = layer_b.qq_render_sort_order
+    layer_a.qq_render_sort_order = order_b
+    layer_b.qq_render_sort_order = order_a
+    logger.debug("Swapped sort orders between %s and %s", layer_a.name, layer_b.name)
+
+
+def get_renderable_view_layers(scene: Scene) -> list[ViewLayer]:
     """Returns list of view layers that are enabled for rendering, sorted by sort order."""
     renderable = []
 
@@ -33,25 +85,26 @@ def get_renderable_view_layers(scene):
     return renderable
 
 
-def setup_compositor(scene):
-    """Enables compositor nodes"""
+def setup_compositor(scene: Scene) -> NodeTree:
+    """Enables compositor nodes."""
     scene.use_nodes = True
     logger.debug("Compositor enabled for scene %s", scene.name)
     return scene.node_tree
 
 
-def clear_nodes(tree):
+def clear_nodes(tree: NodeTree) -> None:
     """Removes all nodes from the compositor."""
     for node in tree.nodes:
         tree.nodes.remove(node)
     logger.debug("Cleared all compositor nodes")
 
 
-def count_visible_sockets(sockets) -> int:
+def count_visible_sockets(sockets: list[NodeSocket]) -> int:
+    """Counts enabled sockets in a socket collection."""
     return sum(1 for socket in sockets if socket.enabled)
 
 
-def estimate_node_height(node):
+def estimate_node_height(node: Node) -> int:
     """Estimates node height based on visible sockets."""
     socket_height = 22
     header_height = 40
@@ -62,20 +115,20 @@ def estimate_node_height(node):
 
     socket_count = max(count_visible_sockets(node.inputs), count_visible_sockets(node.outputs))
 
-    return socket_count*socket_height + minimum_height
+    return socket_count * socket_height + minimum_height
 
 
-def estimate_lowest_node_position(tree):
+def estimate_lowest_node_position(tree: NodeTree) -> float:
     """Estimates lowest node position based on visible sockets."""
     if not tree.nodes:
         return 0
 
-    min_bottom = min(node.location.y -  estimate_node_height(node) for node in tree.nodes)
+    min_bottom = min(node.location.y - estimate_node_height(node) for node in tree.nodes)
     logger.debug("Found lowest node bottom at Y=%d", min_bottom)
     return min_bottom
 
 
-def get_lowest_node_position(tree):
+def get_lowest_node_position(tree: NodeTree) -> float:
     """Returns the Y position below the lowest node in the tree."""
     if not tree.nodes:
         return 0
@@ -85,7 +138,10 @@ def get_lowest_node_position(tree):
     return min_bottom
 
 
-def create_render_layers_node(tree, view_layer, location):
+def create_render_layers_node(
+    tree: NodeTree,
+    view_layer: ViewLayer,
+    location: tuple[float, float]) -> CompositorNodeRLayers:
     """Creates a Render Layers node for the specified view layer."""
     node = tree.nodes.new(type="CompositorNodeRLayers")
     node.layer = view_layer.name
@@ -96,7 +152,11 @@ def create_render_layers_node(tree, view_layer, location):
     return node
 
 
-def create_file_output_node(tree, name, location, base_path):
+def create_file_output_node(
+    tree: NodeTree,
+    name: str,
+    location: tuple[float, float],
+    base_path: str) -> CompositorNodeOutputFile:
     """Creates a File Output node with EXR multilayer format."""
     node = tree.nodes.new(type="CompositorNodeOutputFile")
     node.name = name
@@ -116,7 +176,10 @@ def create_file_output_node(tree, name, location, base_path):
     return node
 
 
-def create_denoise_node(tree, name, location):
+def create_denoise_node(
+    tree: NodeTree,
+    name: str,
+    location: tuple[float, float]) -> CompositorNode:
     """Creates a Denoise node."""
     node = tree.nodes.new(type="CompositorNodeDenoise")
     node.name = name
@@ -129,7 +192,10 @@ def create_denoise_node(tree, name, location):
     return node
 
 
-def create_image_node(tree, bg_image, location):
+def create_image_node(
+    tree: NodeTree,
+    bg_image: BackgroundImage,
+    location: tuple[float, float]) -> CompositorNode:
     """Creates an Image node from a background image object."""
     node = tree.nodes.new(type="CompositorNodeImage")
     node.image = bg_image.image
@@ -149,7 +215,10 @@ def create_image_node(tree, bg_image, location):
     return node
 
 
-def create_alpha_over_node(tree, location, name="Alpha_Over"):
+def create_alpha_over_node(
+    tree: NodeTree,
+    location: tuple[float, float],
+    name: str = "Alpha_Over") -> CompositorNode:
     """Creates a single Alpha Over node."""
     node = tree.nodes.new(type="CompositorNodeAlphaOver")
     node.name = name
@@ -161,7 +230,9 @@ def create_alpha_over_node(tree, location, name="Alpha_Over"):
     return node
 
 
-def create_composite_node(tree, location):
+def create_composite_node(
+    tree: NodeTree,
+    location: tuple[float, float]) -> CompositorNode:
     """Creates a Composite output node."""
     node = tree.nodes.new(type="CompositorNodeComposite")
     node.location = location
@@ -171,7 +242,9 @@ def create_composite_node(tree, location):
     return node
 
 
-def create_viewer_node(tree, location):
+def create_viewer_node(
+    tree: NodeTree,
+    location: tuple[float, float]) -> CompositorNode:
     """Creates a Viewer output node."""
     node = tree.nodes.new(type="CompositorNodeViewer")
     node.location = location
@@ -181,7 +254,10 @@ def create_viewer_node(tree, location):
     return node
 
 
-def create_vector_invert_group(tree, location, name):
+def create_vector_invert_group(
+    tree: NodeTree,
+    location: tuple[float, float],
+    name: str) -> CompositorNode:
     """Creates a Z-up to Y-up conversion node group with Y inversion."""
     group = bpy.data.node_groups.new(name=name, type="CompositorNodeTree")
 

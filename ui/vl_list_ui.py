@@ -1,40 +1,37 @@
 """
-View Layer List
+View Layer List UI
     Description:
         UIList for displaying and managing view layers in the panel.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import bpy
 
+from ..core.tools import get_sorted_view_layers, get_view_layer_sort_position
+
+if TYPE_CHECKING:
+    from bpy.types import Context, Scene, UILayout, ViewLayer
+
 logger = logging.getLogger(__name__)
-
-
-def get_sorted_view_layers(scene):
-    """Returns view layers sorted by qq_render_sort_order."""
-    return sorted(scene.view_layers, key=lambda vl: vl.qq_render_sort_order)
-
-
-def get_view_layer_sort_position(scene, view_layer):
-    """Returns the position of a view layer in sorted order."""
-    sorted_layers = get_sorted_view_layers(scene)
-    for idx, vl in enumerate(sorted_layers):
-        if vl == view_layer:
-            return idx
-    return -1
-
-
-def has_duplicate_sort_orders(scene):
-    """Checks if any view layers have duplicate sort order values."""
-    orders = [vl.qq_render_sort_order for vl in scene.view_layers]
-    return len(orders) != len(set(orders))
 
 
 class QQ_RENDER_UL_vl_list(bpy.types.UIList):
     """UIList for displaying view layers with render toggle."""
 
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+    def draw_item(
+        self,
+        context: Context,
+        layout: UILayout,
+        data: Scene,
+        item: ViewLayer,
+        icon: str,
+        active_data: Scene,
+        active_propname: str,
+        index: int) -> None:
         """Draws a single view layer item in the list."""
         scene = context.scene
         sorted_layers = get_sorted_view_layers(scene)
@@ -67,7 +64,11 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
         row.prop(item, "qq_render_use_composite", text="", icon="NODE_COMPOSITING")
         row.prop(item, "use", text="", icon="RESTRICT_RENDER_OFF" if item.use else "RESTRICT_RENDER_ON")
 
-    def filter_items(self, context, data, propname):
+    def filter_items(
+        self,
+        context: Context,
+        data: Scene,
+        propname: str) -> tuple[list[int], list[int]]:
         """Sorts view layers by qq_render_sort_order."""
         view_layers = getattr(data, propname)
 
@@ -79,17 +80,18 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
         for new_pos, old_idx in enumerate(sorted_indices):
             flt_neworder[old_idx] = new_pos
 
+        logger.debug("Filtered and sorted %d view layers", len(view_layers))
         return flt_flags, flt_neworder
 
 
-classes = [
+_CLASSES = [
     QQ_RENDER_UL_vl_list,
 ]
 
 
-def register():
+def register() -> None:
     """Registers UIList classes and properties."""
-    for cls in classes:
+    for cls in _CLASSES:
         bpy.utils.register_class(cls)
 
     bpy.types.ViewLayer.qq_render_use_composite = bpy.props.BoolProperty(
@@ -104,14 +106,14 @@ def register():
         default=0
     )
 
-    logger.debug("Registered %d UIList classes", len(classes))
+    logger.debug("Registered %d UIList classes", len(_CLASSES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters UIList classes and properties."""
     del bpy.types.ViewLayer.qq_render_use_composite
     del bpy.types.ViewLayer.qq_render_sort_order
 
-    for cls in reversed(classes):
+    for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
     logger.debug("Unregistered UIList classes")

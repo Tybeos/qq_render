@@ -5,6 +5,8 @@ Blender Addon
         Creates File Output nodes with proper pass connections.
 """
 
+from __future__ import annotations
+
 bl_info = {
     "name": "qq Render",
     "author": "Tobias Petruj",
@@ -16,35 +18,36 @@ bl_info = {
 }
 
 import logging
+from types import ModuleType
 
 from .core.logger_config import setup_logging
 
 logger = logging.getLogger(__name__)
 
-modules = []
+_modules: list[ModuleType] = []
 
 
-def register():
+def register() -> None:
     """Registers all addon classes and modules."""
     setup_logging()
 
     from . import operators
-    from . import panels
+    from . import ui
 
-    modules.extend([operators, panels])
+    _modules.extend([operators, ui])
 
-    for module in modules:
+    for module in _modules:
         module.register()
 
-    logger.debug("qq Render addon registered with %d modules", len(modules))
+    logger.debug("qq Render addon registered with %d modules", len(_modules))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters all addon classes and modules."""
-    for module in reversed(modules):
+    for module in reversed(_modules):
         module.unregister()
 
-    modules.clear()
+    _modules.clear()
     logger.debug("qq Render addon unregistered")
 
 

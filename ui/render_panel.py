@@ -1,12 +1,18 @@
 """
-Main Panel
+Render Panel
     Description:
         Main UI panel for qq Render addon in the View Layer properties.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import bpy
+
+if TYPE_CHECKING:
+    from bpy.types import Context
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +27,7 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
     bl_context = "view_layer"
     bl_order = 0
 
-    def draw(self, context):
+    def draw(self, context: Context) -> None:
         """Draws the main panel content."""
         layout = self.layout
         scene = context.scene
@@ -60,23 +66,21 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         row.scale_y = 1.5
         row.operator("qq_render.update_output_paths", icon="FILE_REFRESH")
 
-        logger.debug("Drew main panel with %d view layers", len(scene.view_layers))
 
-
-classes = [
+_CLASSES = [
     QQ_RENDER_PT_main_panel,
 ]
 
 
-def register():
+def register() -> None:
     """Registers panel classes."""
-    for cls in classes:
+    for cls in _CLASSES:
         bpy.utils.register_class(cls)
-    logger.debug("Registered %d panel classes", len(classes))
+    logger.debug("Registered %d panel classes", len(_CLASSES))
 
 
-def unregister():
+def unregister() -> None:
     """Unregisters panel classes."""
-    for cls in reversed(classes):
+    for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
     logger.debug("Unregistered panel classes")
