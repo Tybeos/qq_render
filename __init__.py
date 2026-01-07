@@ -7,6 +7,12 @@ Blender Addon
 
 from __future__ import annotations
 
+import logging
+
+from . import operators
+from . import ui
+from .core.logger_config import setup_logging
+
 bl_info = {
     "name": "qq Render",
     "author": "Tobias Petruj",
@@ -17,37 +23,26 @@ bl_info = {
     "category": "Render",
 }
 
-import logging
-from types import ModuleType
-
-from .core.logger_config import setup_logging
-
 logger = logging.getLogger(__name__)
 
-_modules: list[ModuleType] = []
+_MODULES = [operators, ui]
 
 
 def register() -> None:
     """Registers all addon classes and modules."""
     setup_logging()
 
-    from . import operators
-    from . import ui
-
-    _modules.extend([operators, ui])
-
-    for module in _modules:
+    for module in _MODULES:
         module.register()
 
-    logger.debug("qq Render addon registered with %d modules", len(_modules))
+    logger.debug("qq Render addon registered with %d modules", len(_MODULES))
 
 
 def unregister() -> None:
     """Unregisters all addon classes and modules."""
-    for module in reversed(_modules):
+    for module in reversed(_MODULES):
         module.unregister()
 
-    _modules.clear()
     logger.debug("qq Render addon unregistered")
 
 
