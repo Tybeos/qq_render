@@ -246,15 +246,13 @@ def _build_composite_chain(
     try:
         bg_image = _get_camera_background_image(scene)
         image_node = tools.create_image_node(tree, bg_image, (current_x, current_y))
-        has_background = True
     except ValueError as e:
         logger.debug("No background image used: %s", e)
         image_node = None
-        has_background = False
 
     current_x += 800
 
-    total_inputs = len(composite_nodes) + (1 if has_background else 0)
+    total_inputs = len(composite_nodes) + (1 if image_node is not None else 0)
     alpha_count = total_inputs - 1
 
     composite_x = current_x + (alpha_count * x_offset) + (200 if alpha_count else 0)
@@ -262,7 +260,7 @@ def _build_composite_chain(
     viewer_node = tools.create_viewer_node(tree, (composite_x, current_y + viewer_y_offset))
 
     if total_inputs == 1:
-        source_node = image_node if has_background else composite_nodes[0]
+        source_node = image_node if image_node is not None else composite_nodes[0]
         tree.links.new(source_node.outputs["Image"], composite_output.inputs["Image"])
         tree.links.new(source_node.outputs["Image"], viewer_node.inputs["Image"])
         logger.debug("Connected single source to composite and viewer")
