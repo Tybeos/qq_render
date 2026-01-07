@@ -35,7 +35,12 @@ class QQ_RENDER_UL_vl_list(bpy.types.UIList):
         """Draws a single view layer item in the list."""
         scene = context.scene
         sorted_layers = get_sorted_view_layers(scene)
-        current_pos = get_view_layer_sort_position(scene, item)
+
+        try:
+            current_pos = get_view_layer_sort_position(scene, item)
+        except ValueError:
+            current_pos = 0
+
         is_first = current_pos == 0
         is_last = current_pos == len(sorted_layers) - 1
 

@@ -155,7 +155,12 @@ class QQ_RENDER_OT_vl_move_up(bpy.types.Operator):
             return {"CANCELLED"}
 
         sorted_layers = get_sorted_view_layers(scene)
-        current_pos = get_view_layer_sort_position(scene, view_layer)
+
+        try:
+            current_pos = get_view_layer_sort_position(scene, view_layer)
+        except ValueError as e:
+            self.report({"WARNING"}, str(e))
+            return {"CANCELLED"}
 
         if current_pos <= 0:
             return {"CANCELLED"}
@@ -197,9 +202,14 @@ class QQ_RENDER_OT_vl_move_down(bpy.types.Operator):
             return {"CANCELLED"}
 
         sorted_layers = get_sorted_view_layers(scene)
-        current_pos = get_view_layer_sort_position(scene, view_layer)
 
-        if current_pos < 0 or current_pos >= len(sorted_layers) - 1:
+        try:
+            current_pos = get_view_layer_sort_position(scene, view_layer)
+        except ValueError as e:
+            self.report({"WARNING"}, str(e))
+            return {"CANCELLED"}
+
+        if current_pos >= len(sorted_layers) - 1:
             return {"CANCELLED"}
 
         next_layer = sorted_layers[current_pos + 1]

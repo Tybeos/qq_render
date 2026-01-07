@@ -44,8 +44,7 @@ def get_view_layer_sort_position(scene: Scene, view_layer: ViewLayer) -> int:
         if vl == view_layer:
             logger.debug("View layer %s is at position %d", view_layer.name, idx)
             return idx
-    logger.debug("View layer %s not found in sorted list", view_layer.name)
-    return -1
+    raise ValueError("View layer %s not found in scene" % view_layer.name)
 
 
 def ensure_unique_sort_orders(scene: Scene) -> None:

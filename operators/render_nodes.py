@@ -77,12 +77,13 @@ def _connect_pass_with_invert(
     logger.debug("Connected pass %s through invert group", output.name)
 
 
-def _find_target_input(file_output_node: CompositorNodeOutputFile, slot_name: str) -> NodeSocket | None:
+def _find_target_input(file_output_node: CompositorNodeOutputFile, slot_name: str) -> NodeSocket:
     """Finds the input socket matching the slot name."""
     for input_socket in file_output_node.inputs:
         if input_socket.name == slot_name:
+            logger.debug("Found input socket %s in node %s", slot_name, file_output_node.name)
             return input_socket
-    return None
+    raise ValueError("File output node %s has no input socket named %s" % (file_output_node.name, slot_name))
 
 
 def _get_composite_render_layers(
@@ -153,9 +154,11 @@ def _connect_passes(
 
         slot_name = "Beauty" if output.name == "Image" else output.name
         file_output_node.file_slots.new(name=slot_name)
-        target_input = _find_target_input(file_output_node, slot_name)
 
-        if not target_input:
+        try:
+            target_input = _find_target_input(file_output_node, slot_name)
+        except ValueError as e:
+            logger.warning("Skipping pass %s: %s", output.name, e)
             continue
 
         should_denoise = use_denoise and has_denoise_data and output.name in DENOISE_PASSES
