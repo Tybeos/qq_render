@@ -103,31 +103,30 @@ def _get_composite_render_layers(
     return sorted_nodes
 
 
-def _get_camera_background_image(scene: Scene) -> BackgroundImage | None:
+def _get_camera_background_image(scene: Scene) -> BackgroundImage:
     """Returns the first visible background image from the active camera."""
     camera = scene.camera
 
     if not camera:
-        logger.debug("No active camera in scene")
-        return None
+        raise ValueError("No active camera in scene")
 
     camera_data = camera.data
 
     if not camera_data.background_images:
-        logger.debug("Camera %s has no background images", camera.name)
-        return None
+        raise ValueError("Camera %s has no background images" % camera.name)
 
     visible_bg_images = [bg for bg in camera_data.background_images if bg.show_background_image]
 
     if not visible_bg_images:
-        logger.debug("Camera %s has no visible background images", camera.name)
-        return None
+        raise ValueError("Camera %s has no visible background images" % camera.name)
 
     bg_image = visible_bg_images[0]
 
-    if bg_image.source != "IMAGE" or not bg_image.image:
-        logger.debug("Background image source is not IMAGE or no image assigned")
-        return None
+    if bg_image.source != "IMAGE":
+        raise ValueError("Background image source is %s, expected IMAGE" % bg_image.source)
+
+    if not bg_image.image:
+        raise ValueError("Background image has no image data assigned")
 
     logger.debug("Found background image %s from camera %s", bg_image.image.name, camera.name)
     return bg_image
@@ -241,9 +240,14 @@ def _build_composite_chain(
     x_offset = 200
     viewer_y_offset = -150
 
-    bg_image = _get_camera_background_image(scene)
-    image_node = tools.create_image_node(tree, bg_image, (current_x, current_y)) if bg_image else None
-    has_background = image_node is not None
+    try:
+        bg_image = _get_camera_background_image(scene)
+        image_node = tools.create_image_node(tree, bg_image, (current_x, current_y))
+        has_background = True
+    except ValueError as e:
+        logger.debug("No background image used: %s", e)
+        image_node = None
+        has_background = False
 
     current_x += 800
 
