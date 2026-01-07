@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from . import confirm_dialog
 from . import vl_list_ui
 from . import render_panel
 from . import export_panel
@@ -15,6 +16,7 @@ from . import export_panel
 logger = logging.getLogger(__name__)
 
 _MODULES = [
+    confirm_dialog,
     vl_list_ui,
     render_panel,
     export_panel,
