@@ -26,7 +26,7 @@ version_regex = re.compile(r"(v\d{1,3})", re.IGNORECASE)
 version_number_regex = re.compile(r"v(\d+)$", re.IGNORECASE)
 
 
-def build_base_path(project_name, layer_name):
+def build_base_path(project_name: str, layer_name: str) -> str:
     """Builds the output base path by inserting layer name before version."""
     match = version_regex.search(project_name)
 
@@ -54,7 +54,7 @@ def build_base_path(project_name, layer_name):
     return base_path
 
 
-def build_camera_export_path(project_name):
+def build_camera_export_path(project_name: str) -> str:
     """Builds the camera export path with version info extracted from project name."""
     match = version_regex.search(project_name)
 
@@ -94,4 +94,16 @@ def path_exists(path: Path) -> bool:
     exists = path.exists()
     logger.debug("Path %s exists: %s", path, exists)
     return exists
+
+
+def resolve_relative_path(blend_path: Path, relative_path: str) -> Path:
+    """Resolves a Blender relative path to an absolute path."""
+    if relative_path.startswith("//"):
+        relative_path = relative_path[2:]
+
+    resolved = (blend_path.parent / relative_path).resolve()
+    logger.debug("Resolved %s relative to %s as %s", relative_path, blend_path, resolved)
+    return resolved
+
+
 
