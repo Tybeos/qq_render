@@ -279,6 +279,86 @@ class OrderProcessor:
         return None
 ```
 
+## Error Handling Standards
+
+### Raise Exceptions Instead of Returning None
+Functions that look up or find something should raise `ValueError` on failure instead of returning `None`:
+
+```python
+def find_socket_by_name(node, socket_name):
+    """Finds a socket by name in the given node."""
+    for socket in node.inputs:
+        if socket.name == socket_name:
+            logger.debug("Found socket %s in node %s", socket_name, node.name)
+            return socket
+    raise ValueError("Node %s has no socket named %s" % (node.name, socket_name))
+```
+
+### When to Raise vs Return None
+- ✅ **Raise `ValueError`**: When the function's purpose is to find/get something specific
+  - `get_camera_background_image()` - raises if no valid background image
+  - `find_target_input()` - raises if socket not found
+  - `get_view_layer_position()` - raises if view layer not in scene
+
+- ✅ **Return None or empty**: When absence is a valid, expected state
+  - `get_optional_config()` - config may not exist
+  - Empty list when filtering finds no matches
+
+### Exception Handling Pattern
+Catch exceptions at the appropriate level - where you can handle them meaningfully:
+
+```python
+def process_all_passes(render_node, output_node):
+    """Connects all passes from render node to output node."""
+    for output in render_node.outputs:
+        try:
+            target = find_target_input(output_node, output.name)
+        except ValueError as e:
+            logger.warning("Skipping pass %s: %s", output.name, e)
+            continue
+
+        connect_nodes(output, target)
+
+    logger.debug("Processed passes from %s to %s", render_node.name, output_node.name)
+```
+
+### Exception Types
+Use Python's built-in exceptions:
+- `ValueError` - Invalid value or state (most common)
+- `TypeError` - Wrong type passed
+- `RuntimeError` - Operation failed at runtime
+- `FileNotFoundError` - File/path doesn't exist
+
+### Blender Operator Pattern
+In Blender operators, catch exceptions and report to user:
+
+```python
+def execute(self, context):
+    """Executes the operator."""
+    try:
+        result = some_function_that_may_raise(context.scene)
+    except ValueError as e:
+        self.report({"WARNING"}, str(e))
+        return {"CANCELLED"}
+
+    logger.debug("Operation completed with result %s", result)
+    return {"FINISHED"}
+```
+
+### UI Code Pattern
+In UI drawing code, use fallback values silently:
+
+```python
+def draw_item(self, context, layout, item):
+    """Draws a list item."""
+    try:
+        position = get_item_position(context.scene, item)
+    except ValueError:
+        position = 0
+
+    layout.label(text="Position: %d" % position)
+```
+
 ## Key Principles
 
 1. **Code Structure**: Keep `core/` for shared functionality, separate `operators/` and `ui/`
@@ -286,6 +366,7 @@ class OrderProcessor:
 3. **Paths**: Always use `pathlib.Path`, never string operations
 4. **Logging**: One debug log per method, C-style formatting, appropriate log levels
 5. **Clarity**: Self-documenting code through naming, not comments
+6. **Error Handling**: Raise `ValueError` instead of returning `None` for lookup/find functions
 
 ## Naming Conventions
 
