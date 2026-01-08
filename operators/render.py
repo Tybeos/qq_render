@@ -56,6 +56,9 @@ class QQ_RENDER_OT_check_and_render(bpy.types.Operator):
 
         scene = context.scene
 
+        bpy.ops.qq_render.update_output_paths()
+        logger.debug("Updated output paths before render check")
+
         if not scene.use_nodes or not scene.node_tree:
             logger.debug("No compositor nodes, proceeding with render")
             return bpy.ops.qq_render.render_animation_execute()
