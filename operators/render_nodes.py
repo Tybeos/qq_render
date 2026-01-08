@@ -233,7 +233,8 @@ def _build_composite_chain(
     tree: NodeTree,
     scene: Scene,
     composite_nodes: list[CompositorNodeRLayers],
-    location: tuple[float, float]) -> CompositorNode | None:
+    location: tuple[float, float],
+    use_camera_bg: bool = True) -> CompositorNode | None:
     """Builds composite chain from render layer nodes with optional background image."""
     if not composite_nodes:
         logger.debug("No composite nodes provided")
@@ -243,12 +244,13 @@ def _build_composite_chain(
     x_offset = 200
     viewer_y_offset = -150
 
-    try:
-        bg_image = _get_camera_background_image(scene)
-        image_node = tools.create_image_node(tree, bg_image, (current_x, current_y))
-    except ValueError as e:
-        logger.debug("No background image used: %s", e)
-        image_node = None
+    image_node = None
+    if use_camera_bg:
+        try:
+            bg_image = _get_camera_background_image(scene)
+            image_node = tools.create_image_node(tree, bg_image, (current_x, current_y))
+        except ValueError as e:
+            logger.debug("No background image used: %s", e)
 
     current_x += 800
 
@@ -329,7 +331,8 @@ class QQ_RENDER_OT_generate_nodes(bpy.types.Operator):
         composite_render_nodes = _get_composite_render_layers(render_layers_nodes, scene)
         if composite_render_nodes:
             composite_location = (0, node_y_offset)
-            _build_composite_chain(tree, scene, composite_render_nodes, composite_location)
+            use_camera_bg = scene.qq_render_use_camera_bg
+            _build_composite_chain(tree, scene, composite_render_nodes, composite_location, use_camera_bg)
 
         self.report({"INFO"}, "Generated nodes for {} view layers".format(len(view_layers)))
         logger.debug("Node generation completed for %d view layers", len(view_layers))
@@ -397,11 +400,18 @@ def register() -> None:
         default=True
     )
 
+    bpy.types.Scene.qq_render_use_camera_bg = bpy.props.BoolProperty(
+        name="Camera Background",
+        description="Include camera background image in compositor setup",
+        default=True
+    )
+
     logger.debug("Registered %d operator classes", len(_CLASSES))
 
 
 def unregister() -> None:
     """Unregisters operator classes."""
+    del bpy.types.Scene.qq_render_use_camera_bg
     del bpy.types.Scene.qq_render_make_y_up
     del bpy.types.Scene.qq_render_clear_nodes
 

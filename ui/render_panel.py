@@ -61,6 +61,9 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         split = col.split(factor=0.4)
         split.label(text="")
         split.prop(scene, "qq_render_make_y_up")
+        split = col.split(factor=0.4)
+        split.label(text="")
+        split.prop(scene, "qq_render_use_camera_bg")
 
         row = layout.row()
         row.scale_y = 1.5
