@@ -12,7 +12,11 @@ from typing import TYPE_CHECKING
 
 import bpy
 
-from ..core.path_utils import resolve_relative_path, path_exists
+from ..core.path_utils import (
+    build_camera_export_path,
+    path_exists,
+    resolve_relative_path,
+)
 
 if TYPE_CHECKING:
     from bpy.types import Context, Event
@@ -31,9 +35,15 @@ class QQ_RENDER_OT_render_animation_execute(bpy.types.Operator):
 
     def execute(self, context: Context) -> set[str]:
         """Executes the render animation operator."""
+        scene = context.scene
+
+        if scene.qq_render_export_camera:
+            bpy.ops.qq_render.export_camera_execute()
+            logger.debug("Exported camera before render")
+
         logger.debug("Starting animation render")
-        logger.debug("Compositor enabled: %s", context.scene.use_nodes)
-        logger.debug("Frame range: %d - %d", context.scene.frame_start, context.scene.frame_end)
+        logger.debug("Compositor enabled: %s", scene.use_nodes)
+        logger.debug("Frame range: %d - %d", scene.frame_start, scene.frame_end)
 
         self.report({"INFO"}, "Rendering...")
         return {"FINISHED"}
@@ -56,8 +66,9 @@ class QQ_RENDER_OT_check_and_render(bpy.types.Operator):
 
         scene = context.scene
 
-        bpy.ops.qq_render.update_output_paths()
-        logger.debug("Updated output paths before render check")
+        if scene.qq_render_update_paths:
+            bpy.ops.qq_render.update_output_paths()
+            logger.debug("Updated output paths before render check")
 
         if not scene.use_nodes or not scene.node_tree:
             logger.debug("No compositor nodes, proceeding with render")
@@ -65,8 +76,16 @@ class QQ_RENDER_OT_check_and_render(bpy.types.Operator):
 
         tree = scene.node_tree
         blend_path = Path(bpy.data.filepath)
+        project_name = blend_path.stem
         existing_paths = []
         file_output_count = 0
+
+        if scene.qq_render_export_camera:
+            camera_relative_path = build_camera_export_path(project_name)
+            camera_path = resolve_relative_path(blend_path, camera_relative_path)
+            if path_exists(camera_path):
+                existing_paths.append(str(camera_path))
+                logger.debug("Found existing camera export at %s", camera_path)
 
         for node in tree.nodes:
             if node.type == "OUTPUT_FILE":
@@ -116,11 +135,27 @@ def register() -> None:
     """Registers operator classes."""
     for cls in _CLASSES:
         bpy.utils.register_class(cls)
+
+    bpy.types.Scene.qq_render_export_camera = bpy.props.BoolProperty(
+        name="Export Camera",
+        description="Export camera to Alembic before rendering",
+        default=False
+    )
+
+    bpy.types.Scene.qq_render_update_paths = bpy.props.BoolProperty(
+        name="Update Output Paths",
+        description="Update File Output node paths before rendering",
+        default=True
+    )
+
     logger.debug("Registered %d operator classes", len(_CLASSES))
 
 
 def unregister() -> None:
     """Unregisters operator classes."""
+    del bpy.types.Scene.qq_render_update_paths
+    del bpy.types.Scene.qq_render_export_camera
+
     for cls in reversed(_CLASSES):
         bpy.utils.unregister_class(cls)
     logger.debug("Unregistered operator classes")

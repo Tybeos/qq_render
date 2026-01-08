@@ -52,11 +52,15 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         layout.separator()
 
-        split = layout.split(factor=0.333, align=False)
-        split.column()
-        col = split.column(align=True)
-        col.prop(scene, "qq_render_make_y_up")
-        col.prop(scene, "qq_render_clear_nodes")
+        col = layout.column()
+        split = col.split(factor=0.4)
+        sub = split.row()
+        sub.alignment = "RIGHT"
+        sub.label(text="Render Nodes")
+        split.prop(scene, "qq_render_clear_nodes")
+        split = col.split(factor=0.4)
+        split.label(text="")
+        split.prop(scene, "qq_render_make_y_up")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -65,6 +69,18 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("qq_render.update_output_paths", icon="FILE_REFRESH")
+
+        layout.separator()
+
+        col = layout.column()
+        split = col.split(factor=0.4)
+        sub = split.row()
+        sub.alignment = "RIGHT"
+        sub.label(text="qq Render")
+        split.prop(scene, "qq_render_export_camera")
+        split = col.split(factor=0.4)
+        split.label(text="")
+        split.prop(scene, "qq_render_update_paths")
 
         row = layout.row()
         row.scale_y = 1.5
