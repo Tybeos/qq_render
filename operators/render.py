@@ -1,39 +1,111 @@
 """
 Render Operators
     Description:
-        Operators for rendering animations in Blender.
+        Operators for rendering animations in Blender with output file checks.
 """
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import bpy
 
+from ..core.path_utils import resolve_relative_path, path_exists
+
 if TYPE_CHECKING:
-    from bpy.types import Context
+    from bpy.types import Context, Event
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
-class QQ_RENDER_OT_render_animation(bpy.types.Operator):
-    """Renders the active scene as an animation."""
+class QQ_RENDER_OT_render_animation_execute(bpy.types.Operator):
+    """Executes render animation without confirmation check."""
 
-    bl_idname = "qq_render.render_animation"
-    bl_label = "QQ Render Animation"
-    bl_description = "Render active scene"
-    bl_options = {"REGISTER"}
+    bl_idname = "qq_render.render_animation_execute"
+    bl_label = "Render Animation Execute"
+    bl_description = "Execute animation render"
+    bl_options = {"INTERNAL"}
 
     def execute(self, context: Context) -> set[str]:
         """Executes the render animation operator."""
-        bpy.ops.render.render(animation=True, use_viewport=True)
-        logger.debug("Started animation render")
+        logger.debug("Starting animation render")
+        logger.debug("Compositor enabled: %s", context.scene.use_nodes)
+        logger.debug("Frame range: %d - %d", context.scene.frame_start, context.scene.frame_end)
+
+        self.report({"INFO"}, "Rendering...")
         return {"FINISHED"}
 
 
+class QQ_RENDER_OT_check_and_render(bpy.types.Operator):
+    """Checks for existing render outputs and renders animation with confirmation."""
+
+    bl_idname = "qq_render.check_and_render"
+    bl_label = "qq Render Animation"
+    bl_description = "Check for existing outputs and render active scene"
+    bl_options = {"REGISTER"}
+
+    def invoke(self, context: Context, event: Event) -> set[str]:
+        """Checks for existing files and shows confirmation dialog if needed."""
+        if not bpy.data.filepath:
+            self.report({"WARNING"}, "Project is not saved. Please save the project first.")
+            logger.warning("Render cancelled - project is not saved")
+            return {"CANCELLED"}
+
+        scene = context.scene
+
+        if not scene.use_nodes or not scene.node_tree:
+            logger.debug("No compositor nodes, proceeding with render")
+            return bpy.ops.qq_render.render_animation_execute()
+
+        tree = scene.node_tree
+        blend_path = Path(bpy.data.filepath)
+        existing_paths = []
+        file_output_count = 0
+
+        for node in tree.nodes:
+            if node.type == "OUTPUT_FILE":
+                file_output_count += 1
+                base_path_str = node.base_path
+                resolved = resolve_relative_path(blend_path, base_path_str)
+
+                if path_exists(resolved):
+                    existing_paths.append(str(resolved))
+                    logger.debug("Found existing output at %s", resolved)
+
+        if file_output_count == 0:
+            self.report({"WARNING"}, "No File Output nodes found")
+            logger.warning("Render cancelled - no File Output nodes found")
+            return {"CANCELLED"}
+
+        if existing_paths:
+            props = context.window_manager.qq_confirm_dialog
+            props.file_paths.clear()
+
+            for path in existing_paths:
+                item = props.file_paths.add()
+                item.path = path
+
+            props.callback_operator = "qq_render.render_animation_execute"
+            props.title = "Render outputs already exist:"
+
+            bpy.ops.qq_render.overwrite_confirm("INVOKE_DEFAULT")
+            logger.debug("Showing overwrite confirm for %d paths", len(existing_paths))
+            return {"FINISHED"}
+
+        logger.debug("No existing outputs found, proceeding with render")
+        return bpy.ops.qq_render.render_animation_execute()
+
+    def execute(self, context: Context) -> set[str]:
+        """Fallback execute method."""
+        return bpy.ops.qq_render.render_animation_execute()
+
+
 _CLASSES = [
-    QQ_RENDER_OT_render_animation,
+    QQ_RENDER_OT_render_animation_execute,
+    QQ_RENDER_OT_check_and_render,
 ]
 
 

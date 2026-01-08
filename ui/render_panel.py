@@ -68,7 +68,7 @@ class QQ_RENDER_PT_main_panel(bpy.types.Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("qq_render.render_animation", icon="RENDER_ANIMATION")
+        row.operator("qq_render.check_and_render", icon="RENDER_ANIMATION")
 
 
 _CLASSES = [
