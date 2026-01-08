@@ -269,7 +269,8 @@ def _build_composite_chain(
         return composite_output
 
     alpha_nodes = _create_alpha_chain(tree, alpha_count, (current_x, current_y), x_offset)
-    _connect_alpha_inputs(tree, alpha_nodes, composite_nodes, image_node)
+    reversed_nodes = list(reversed(composite_nodes))
+    _connect_alpha_inputs(tree, alpha_nodes, reversed_nodes, image_node)
 
     last_alpha = alpha_nodes[-1]
     tree.links.new(last_alpha.outputs["Image"], composite_output.inputs["Image"])
