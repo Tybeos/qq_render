@@ -12,6 +12,7 @@ from . import confirm_dialog
 from . import vl_list_ui
 from . import render_panel
 from . import export_panel
+from . import render_menu
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ _MODULES = [
     vl_list_ui,
     render_panel,
     export_panel,
+    render_menu,
 ]
 
 
