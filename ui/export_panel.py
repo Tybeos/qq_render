@@ -33,10 +33,6 @@ class QQ_RENDER_PT_export_panel(bpy.types.Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("qq_render.generate_axis", icon="EMPTY_AXIS")
-
-        row = layout.row()
-        row.scale_y = 1.5
         row.operator("qq_render.export_camera", icon="OUTLINER_OB_CAMERA")
 
 
