@@ -12,6 +12,7 @@ from . import render_nodes
 from . import vl_list_ops
 from . import export_camera
 from . import render
+from . import generate_axis
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ _MODULES = [
     render_nodes,
     export_camera,
     render,
+    generate_axis,
 ]
 
 
