@@ -8,6 +8,7 @@ Confirm Dialog UI
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import bpy
@@ -74,12 +75,12 @@ class QQ_RENDER_OT_overwrite_confirm(bpy.types.Operator):
 
         file_count = len(props.file_paths)
         if file_count == 1:
-            layout.label(text=props.file_paths[0].path)
+            layout.label(text=Path(props.file_paths[0].path).name)
         elif file_count > 1:
             layout.label(text="%d files will be overwritten:" % file_count)
             box = layout.box()
             for item in props.file_paths:
-                box.label(text=item.path)
+                box.label(text=Path(item.path).name)
 
         layout.separator()
         layout.label(text="Do you want to overwrite?")
