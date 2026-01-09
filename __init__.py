@@ -9,6 +9,16 @@ from __future__ import annotations
 
 import logging
 
+bl_info = {
+    "name": "qq Render",
+    "author": "Tobias Petruj",
+    "version": (1, 0, 2),
+    "blender": (4, 2, 0),
+    "location": "Properties > View Layer",
+    "description": "Generate render compositor nodes from view layers",
+    "category": "Render",
+}
+
 from . import operators
 from . import ui
 from .core.logger_config import setup_logging
