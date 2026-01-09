@@ -41,11 +41,8 @@ class QQ_RENDER_OT_render_animation_execute(bpy.types.Operator):
             bpy.ops.qq_render.export_camera_execute()
             logger.debug("Exported camera before render")
 
-        logger.debug("Starting animation render")
-        logger.debug("Compositor enabled: %s", scene.use_nodes)
-        logger.debug("Frame range: %d - %d", scene.frame_start, scene.frame_end)
-
-        self.report({"INFO"}, "Rendering...")
+        bpy.ops.render.render("INVOKE_DEFAULT", animation=True, use_viewport=True)
+        logger.debug("Started animation render for frames %d-%d", scene.frame_start, scene.frame_end)
         return {"FINISHED"}
 
 
