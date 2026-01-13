@@ -359,6 +359,66 @@ def draw_item(self, context, layout, item):
     layout.label(text="Position: %d" % position)
 ```
 
+## Blender Addon Registration Pattern
+
+### Hierarchical Module Registration
+Use `_MODULES` and `_CLASSES` for organizing Blender addon registration.
+
+### Package-Level `_MODULES`
+Each package (`__init__.py`) contains a list of submodules to register:
+
+```python
+from . import render_nodes
+from . import vl_list_ops
+from . import export_camera
+
+_MODULES = [
+    render_nodes,
+    vl_list_ops,
+    export_camera,
+]
+
+def register() -> None:
+    """Registers all operator modules."""
+    for module in _MODULES:
+        module.register()
+    logger.debug("Registered %d modules", len(_MODULES))
+
+def unregister() -> None:
+    """Unregisters all operator modules."""
+    for module in reversed(_MODULES):
+        module.unregister()
+```
+
+### Module-Level `_CLASSES`
+Individual modules list their Blender classes (Operators, Panels, UILists, PropertyGroups):
+
+```python
+_CLASSES = [
+    QQ_RENDER_OT_render_animation,
+    QQ_RENDER_OT_check_and_render,
+]
+
+def register() -> None:
+    """Registers operator classes."""
+    for cls in _CLASSES:
+        bpy.utils.register_class(cls)
+    bpy.types.Scene.qq_render_export_camera = bpy.props.BoolProperty(name="Export Camera")
+    logger.debug("Registered %d classes", len(_CLASSES))
+
+def unregister() -> None:
+    """Unregisters operator classes."""
+    del bpy.types.Scene.qq_render_export_camera
+    for cls in reversed(_CLASSES):
+        bpy.utils.unregister_class(cls)
+```
+
+### Registration Rules
+- Register classes before adding properties
+- Unregister properties before unregistering classes
+- Always use `reversed()` in `unregister()` for proper cleanup order
+- One debug log per register/unregister function
+
 ## Key Principles
 
 1. **Code Structure**: Keep `core/` for shared functionality, separate `operators/` and `ui/`
